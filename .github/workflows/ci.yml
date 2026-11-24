@@ -51,7 +51,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: 2.122.1 # pinned: "latest" calls the GitHub API and can hit rate limits
       - run: supabase db start

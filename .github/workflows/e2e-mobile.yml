@@ -1,20 +1,15 @@
 name: E2E (mobile)
 
 # Builds a release APK for the emulator and runs every Maestro flow in apps/mobile/e2e.
-# Runs only when the app, shared contracts or this workflow change (it takes ~20 minutes).
+#
+# Runs on every PR so it can be a required check. The emulator job (~20 minutes) starts only
+# when the app, shared contracts, the lockfile or this workflow changed; otherwise it is
+# skipped, and GitHub counts a skipped required check as passed.
 
 on:
   pull_request:
-    paths:
-      - 'apps/mobile/**'
-      - 'packages/shared/**'
-      - 'pnpm-lock.yaml'
-      - '.github/workflows/e2e-mobile.yml'
   push:
     branches: [main]
-    paths:
-      - 'apps/mobile/**'
-      - 'packages/shared/**'
 
 permissions:
   contents: read
@@ -24,8 +19,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect mobile changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mobile: ${{ steps.diff.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # Unknown base (e.g. first push): run the tests to be safe.
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "mobile=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if git diff --name-only "$BASE" HEAD \
+            | grep -qE '^(apps/mobile/|packages/shared/|pnpm-lock\.yaml$|\.npmrc$|\.github/workflows/e2e-mobile\.yml$)'; then
+            echo "mobile=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mobile=false" >> "$GITHUB_OUTPUT"
+          fi
+
   android:
     name: Maestro on Android emulator
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:

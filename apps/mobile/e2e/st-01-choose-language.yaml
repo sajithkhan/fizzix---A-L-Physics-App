@@ -1,0 +1,59 @@
+# ST-01 · Choose app language (Screen 0) — end to end on a real Android build.
+appId: lk.fizzix.app
+name: ST-01 Choose app language
+tags:
+  - ST-01
+---
+# AC1: first launch shows the language screen, Tamil selected, English disabled.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: language-screen
+    timeout: 20000
+- assertVisible:
+    id: language-option-ta
+    selected: true
+- assertVisible:
+    id: language-option-si
+    enabled: true
+- assertVisible:
+    id: language-option-en
+    enabled: false
+- assertVisible: '.*விரைவில்.*'
+- assertVisible: 'தொடர்க'
+
+# AC1: tapping English changes nothing.
+- tapOn:
+    id: language-option-en
+- assertVisible:
+    id: language-option-ta
+    selected: true
+
+# AC2: picking Sinhala switches the preview and the button straight away.
+- tapOn:
+    id: language-option-si
+- assertVisible:
+    id: language-option-si
+    selected: true
+- assertVisible: 'පෙරදසුන'
+- assertVisible: 'ඉදිරියට'
+- assertNotVisible: 'தொடர்க'
+
+# AC3: continue saves the choice and moves on.
+- tapOn:
+    id: language-continue
+- assertVisible:
+    id: welcome-screen
+- assertVisible: 'සාදරයෙන් පිළිගනිමු'
+
+# The choice survives an app restart: no language screen the second time.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: welcome-screen
+    timeout: 20000
+- assertNotVisible:
+    id: language-screen
+- assertVisible: 'සාදරයෙන් පිළිගනිමු'

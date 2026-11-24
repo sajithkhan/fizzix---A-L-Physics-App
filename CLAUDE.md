@@ -14,15 +14,15 @@ white-label. When unsure, choose the safer and simpler option and say why.
 
 ## Repo layout
 
-| Path                  | Holds                                                                  |
-| --------------------- | ---------------------------------------------------------------------- |
-| `apps/mobile`         | Expo (React Native) app – added in Phase 2                             |
-| `apps/web`            | Next.js admin panel and public pages – added in Phase 2                |
-| `packages/shared`     | zod API contracts, shared types, constants                             |
-| `supabase/migrations` | Schema, RLS policies, SQL functions. The only way the database changes |
-| `supabase/tests`      | pgTAP tests for every table, policy and function                       |
-| `supabase/functions`  | Edge Functions (Deno). `_shared` holds the request pipeline            |
-| `pipeline/`           | Content generation jobs, versioned prompts, AI evals                   |
+| Path                  | Holds                                                                                    |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| `apps/mobile`         | Expo (React Native) app. Routes `src/app`, features `src/features`, Maestro flows `e2e/` |
+| `apps/web`            | Next.js admin panel and public pages – added in Phase 2                                  |
+| `packages/shared`     | zod API contracts, shared types, constants                                               |
+| `supabase/migrations` | Schema, RLS policies, SQL functions. The only way the database changes                   |
+| `supabase/tests`      | pgTAP tests for every table, policy and function                                         |
+| `supabase/functions`  | Edge Functions (Deno). `_shared` holds the request pipeline                              |
+| `pipeline/`           | Content generation jobs, versioned prompts, AI evals                                     |
 
 ## Workflow (non-negotiable)
 
@@ -69,3 +69,5 @@ white-label. When unsure, choose the safer and simpler option and say why.
 - `pnpm typecheck` – TypeScript checks
 - `pnpm db:test` – run migrations and pgTAP tests against a local Postgres
 - `supabase start` / `supabase test db` – full local Supabase stack (needs Docker)
+- `pnpm --filter @fizzix/mobile test` – mobile component tests
+- `cd apps/mobile && maestro test e2e/` – mobile end-to-end flows (see `apps/mobile/e2e/README.md`)

@@ -1,0 +1,12 @@
+{
+  "appName": "Fizzix",
+  "slug": "fizzix",
+  "scheme": "fizzix",
+  "androidPackage": "lk.fizzix.app",
+  "iosBundleId": "lk.fizzix.app",
+  "colors": {
+    "primary": "#1E3A8A",
+    "primaryDark": "#2563EB",
+    "accentDark": "#60A5FA"
+  }
+}

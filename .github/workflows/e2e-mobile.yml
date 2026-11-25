@@ -73,7 +73,19 @@ jobs:
         with:
           version: 2.122.1
       - name: Start local Supabase
-        run: supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+        # Retries because a shared GitHub runner occasionally has a Supabase port (5432x)
+        # briefly taken; each failed try logs what holds the port, then cleans up.
+        run: |
+          for attempt in 1 2 3; do
+            if supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor; then
+              exit 0
+            fi
+            echo "::warning::supabase start failed (attempt $attempt of 3). Listening on Supabase ports:"
+            sudo ss -ltnp | grep -E ':543[0-9][0-9]\b' || true
+            supabase stop --no-backup || true
+            sleep 15
+          done
+          exit 1
       - name: Point the test build at it
         run: |
           eval "$(supabase status -o env 2>/dev/null)"

@@ -1,4 +1,6 @@
 # ST-02 · Register with phone number and OTP — end to end against a local Supabase.
+# Keyboard: tap the screen title to close it. Maestro's hideKeyboard presses Back when no
+# keyboard is open, which closes the app on this first screen.
 # Uses test numbers from supabase/config.toml ([auth.sms.test_otp], code 123456); no real SMS.
 appId: lk.fizzix.app
 name: ST-02 Register with phone number and OTP
@@ -35,7 +37,7 @@ tags:
 
 # AC1: a valid number gets an OTP and the code boxes appear.
 - inputText: '0770000001'
-- hideKeyboard
+- tapOn: 'புதிய கணக்கு'
 - tapOn:
     id: register-send-otp
 - extendedWaitUntil:
@@ -49,7 +51,7 @@ tags:
 
 # AC3: a wrong code shows an error and stays here.
 - inputText: '000000'
-- hideKeyboard
+- tapOn: 'புதிய கணக்கு'
 - tapOn:
     id: register-verify
 - extendedWaitUntil:
@@ -67,7 +69,7 @@ tags:
     optional: true
 - eraseText: 6
 - inputText: '123456'
-- hideKeyboard
+- tapOn: 'புதிய கணக்கு'
 - tapOn:
     id: register-verify
 - extendedWaitUntil:

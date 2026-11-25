@@ -55,6 +55,8 @@ jobs:
         with:
           version: 2.122.1 # pinned: "latest" calls the GitHub API and can hit rate limits
       - name: Start local database
+        env:
+          SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN: local-placeholder
         # Same retry as the E2E job: a shared runner can briefly hold port 54322.
         run: |
           for attempt in 1 2 3; do

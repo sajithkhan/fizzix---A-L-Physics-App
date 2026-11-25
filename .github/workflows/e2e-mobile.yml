@@ -73,6 +73,9 @@ jobs:
         with:
           version: 2.122.1
       - name: Start local Supabase
+        env:
+          # Placeholder for the unused local Twilio entry in config.toml (not a credential).
+          SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN: local-placeholder
         # Retries because a shared GitHub runner occasionally has a Supabase port (5432x)
         # briefly taken; each failed try logs what holds the port, then cleans up.
         run: |

@@ -46,6 +46,8 @@ export function toOtpError(error: unknown): OtpError {
       return 'sms_unavailable';
   }
   if (e.name === 'AuthRetryableFetchError' || e.status === 0) return 'network';
+  // Unknown error: log only the code and status (never the message, which may echo input).
+  console.warn('[auth] unexpected error', { code: e.code ?? null, status: e.status ?? null });
   return 'internal';
 }
 

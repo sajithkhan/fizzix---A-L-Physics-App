@@ -96,6 +96,24 @@ jobs:
           echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$KEY" >> "$GITHUB_ENV"
           echo "E2E_ALLOW_CLEARTEXT=1" >> "$GITHUB_ENV"
 
+      # Fails fast (before the ~15 minute Android build) if the OTP sign-up path is broken.
+      # Uses the second test number so the Maestro flow's number is untouched.
+      - name: Smoke-test OTP sign-up against the local Supabase
+        run: |
+          api=http://127.0.0.1:54321/auth/v1
+          send=$(curl -s -w '\n%{http_code}' -X POST "$api/otp" \
+            -H "apikey: $EXPO_PUBLIC_SUPABASE_ANON_KEY" -H 'Content-Type: application/json' \
+            -d '{"phone":"+94770000002","create_user":true}')
+          echo "send OTP -> $send"
+          verify=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$api/verify" \
+            -H "apikey: $EXPO_PUBLIC_SUPABASE_ANON_KEY" -H 'Content-Type: application/json' \
+            -d '{"phone":"+94770000002","token":"123456","type":"sms"}')
+          echo "verify OTP -> $verify"
+          if [ "$(echo "$send" | tail -1)" != "200" ] || [ "$verify" != "200" ]; then
+            echo "::group::auth log"; docker logs supabase_auth_fizzix --tail 80 2>&1; echo "::endgroup::"
+            exit 1
+          fi
+
       - name: Generate native Android project
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --no-install

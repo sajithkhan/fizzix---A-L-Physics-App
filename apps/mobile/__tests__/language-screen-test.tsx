@@ -116,9 +116,9 @@ describe('ST-01 picking a language', () => {
     await fireEvent.press(await screen.findByTestId('language-option-si'));
     await fireEvent.press(screen.getByTestId('language-continue'));
 
-    await waitFor(() => expect(router.getPathname()).toBe('/welcome'));
+    await waitFor(() => expect(router.getPathname()).toBe('/register'));
     expect(await AsyncStorage.getItem(LOCALE_STORAGE_KEY)).toBe('si');
-    expect(screen.getByText(si.welcome.title)).toBeOnTheScreen();
+    expect(await screen.findByText(si.register.title)).toBeOnTheScreen();
   });
 
   it('AC3: when signed in, continue also saves the choice to the profile', async () => {
@@ -155,8 +155,8 @@ describe('ST-01 returning student', () => {
     await AsyncStorage.setItem(LOCALE_STORAGE_KEY, 'si');
     const router = await renderRouter('src/app', { initialUrl: '/' });
 
-    await waitFor(() => expect(router.getPathname()).toBe('/welcome'));
-    expect(await screen.findByText(si.welcome.title)).toBeOnTheScreen();
+    await waitFor(() => expect(router.getPathname()).toBe('/register'));
+    expect(await screen.findByText(si.register.title)).toBeOnTheScreen();
   });
 
   it('ignores a corrupted saved value and asks again', async () => {

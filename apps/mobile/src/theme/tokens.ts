@@ -24,6 +24,13 @@ export interface Palette {
   disabledText: string;
   disabledGlyph: string;
   label: string;
+  fieldLabel: string;
+  inputBorder: string;
+  inputBg: string;
+  prefixBg: string;
+  otpFilled: string;
+  danger: string;
+  dangerBg: string;
 }
 
 export const palettes: { light: Palette; dark: Palette } = {
@@ -47,6 +54,13 @@ export const palettes: { light: Palette; dark: Palette } = {
     disabledText: '#64748B',
     disabledGlyph: '#F1F5F9',
     label: brand.colors.primary,
+    fieldLabel: '#334155',
+    inputBorder: '#CBD5E1',
+    inputBg: '#FFFFFF',
+    prefixBg: '#F8FAFC',
+    otpFilled: '#94A3B8',
+    danger: '#B91C1C',
+    dangerBg: '#FEF2F2',
   },
   dark: {
     background: '#0B1220',
@@ -68,8 +82,15 @@ export const palettes: { light: Palette; dark: Palette } = {
     disabledText: '#94A3B8',
     disabledGlyph: '#1B2540',
     label: '#93C5FD',
+    fieldLabel: '#CBD5E1',
+    inputBorder: '#334155',
+    inputBg: '#111A2E',
+    prefixBg: '#162036',
+    otpFilled: '#94A3B8',
+    danger: '#F87171',
+    dangerBg: '#2A1215',
   },
 };
 
-export const radius = { sm: 12, md: 14, lg: 16, xl: 18, pill: 99 } as const;
+export const radius = { xs: 10, sm: 12, md: 14, lg: 16, xl: 18, card: 20, pill: 99 } as const;
 export const space = { xs: 6, sm: 10, md: 12, lg: 16, xl: 24 } as const;

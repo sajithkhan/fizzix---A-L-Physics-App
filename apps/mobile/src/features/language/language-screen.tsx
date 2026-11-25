@@ -45,7 +45,7 @@ export function LanguageScreen() {
       await saveLocale(active);
       analytics.track('language_selected', { locale: active, first_launch: saved === null });
       setSaved(active);
-      router.replace('/welcome');
+      router.replace('/');
     } finally {
       setSaving(false);
     }

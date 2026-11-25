@@ -123,9 +123,15 @@ jobs:
           target: google_apis
           profile: pixel_6
           disable-animations: true
+          # More CPU and memory: the default 2 cores leave the system UI unresponsive right
+          # after boot ("Pixel Launcher isn't responding"), and that dialog hid our app.
+          cores: 4
+          ram-size: 4096M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
+            adb shell settings put global hide_error_dialogs 1
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            bash apps/mobile/e2e/wait-for-idle.sh
             bash apps/mobile/e2e/run.sh
 
       - name: Upload Maestro report and screenshots

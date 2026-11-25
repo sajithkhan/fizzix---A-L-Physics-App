@@ -1,14 +1,50 @@
+# Dependabot: few, safe PRs.
+#
+# - Version updates: one grouped PR per ecosystem per month, minor and patch only.
+# - npm major versions (e.g. zod 4, TypeScript 7) are planned upgrades, not bot PRs.
+# - Expo-managed mobile packages move only with an Expo SDK upgrade
+#   (`npx expo install --fix`), never on their own.
+# - Security: Dependabot alerts stay on for every package, including the ignored ones.
+#   Note that `ignore` rules also apply to security-fix PRs, so an alert on an ignored
+#   package is fixed by hand (usually an Expo SDK patch).
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: monthly
+    open-pull-requests-limit: 3
     groups:
-      dev-tooling:
-        dependency-type: development
+      minor-and-patch:
+        applies-to: version-updates
+        patterns: ['*']
+        update-types: [minor, patch]
+      security:
+        applies-to: security-updates
+        patterns: ['*']
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+      # Pinned by the Expo SDK (apps/mobile). Upgrade together with `expo`.
+      - dependency-name: 'expo'
+      - dependency-name: 'expo-*'
+      - dependency-name: '@expo/*'
+      - dependency-name: 'jest-expo'
+      - dependency-name: 'react'
+      - dependency-name: 'react-dom'
+      - dependency-name: '@types/react'
+      - dependency-name: 'react-native'
+      - dependency-name: 'react-native-*'
+      - dependency-name: '@react-native/*'
+      - dependency-name: '@react-native-async-storage/*'
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 2
+    # All action updates (majors included: they are usually safe and carry runtime
+    # deprecation fixes) in one monthly PR.
+    groups:
+      actions:
+        patterns: ['*']

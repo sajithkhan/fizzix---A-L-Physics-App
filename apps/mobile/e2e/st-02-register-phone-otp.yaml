@@ -1,0 +1,86 @@
+# ST-02 · Register with phone number and OTP — end to end against a local Supabase.
+# Keyboard: tap the screen title to close it. Maestro's hideKeyboard presses Back when no
+# keyboard is open, which closes the app on this first screen.
+# Uses test numbers from supabase/config.toml ([auth.sms.test_otp], code 123456); no real SMS.
+appId: lk.fizzix.app
+name: ST-02 Register with phone number and OTP
+tags:
+  - ST-02
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: language-screen
+    timeout: 60000
+- tapOn:
+    id: language-continue
+- extendedWaitUntil:
+    visible:
+      id: register-screen
+    timeout: 20000
+- assertVisible: 'புதிய கணக்கு'
+
+# Not a Sri Lankan mobile: refused in the app, no SMS requested.
+- tapOn:
+    id: register-phone
+- inputText: '0112345678'
+- tapOn:
+    id: register-send-otp
+- assertVisible:
+    id: register-error
+- assertVisible: '.*07X XXX XXXX.*'
+# Focus the number field again before clearing it (the tap above moved focus to the button).
+- tapOn:
+    id: register-phone
+- eraseText: 20
+
+# AC1: a valid number gets an OTP and the code boxes appear.
+- inputText: '0770000001'
+- tapOn: 'புதிய கணக்கு'
+- tapOn:
+    id: register-send-otp
+- extendedWaitUntil:
+    visible:
+      id: register-verify
+    timeout: 20000
+- assertVisible: '.*77 000 0001.*'
+- assertVisible:
+    id: register-resend
+    enabled: false
+
+# AC3: a wrong code shows an error and stays here.
+- inputText: '000000'
+- tapOn: 'புதிய கணக்கு'
+- tapOn:
+    id: register-verify
+- extendedWaitUntil:
+    visible:
+      id: register-error
+    timeout: 20000
+- assertVisible: '.*OTP தவறு.*'
+- assertVisible:
+    id: register-screen
+
+# AC2: the correct code verifies the number and opens account creation.
+# Re-focus the code field (it usually still has focus; the tap is a safety net).
+- tapOn:
+    id: register-otp-boxes
+    optional: true
+- eraseText: 6
+- inputText: '123456'
+- tapOn: 'புதிய கணக்கு'
+- tapOn:
+    id: register-verify
+- extendedWaitUntil:
+    visible:
+      id: account-setup-screen
+    timeout: 20000
+
+# The verified session survives a restart: the student resumes at account creation.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: account-setup-screen
+    timeout: 30000

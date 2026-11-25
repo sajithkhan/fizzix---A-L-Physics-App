@@ -65,8 +65,9 @@ enabled = true
 schema_paths = []
 
 [db.seed]
-# Reference data (locales, brand, subjects) ships in migrations; there is no dev seed yet.
-enabled = false
+# Local/CI only (never production): test phone numbers for the OTP flow. Reference data
+# (locales, brand, subjects) ships in migrations, not here.
+enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
 sql_paths = ["./seed.sql"]
@@ -263,12 +264,15 @@ enable_confirmations = true
 # Template for sending OTP to users
 template = "Your code is {{ .Code }}"
 # Controls the minimum amount of time that must pass before sending another sms otp.
-max_frequency = "60s"
+# ST-02: resend after 45 seconds. The per-number hourly limit is in private.send_sms_hook.
+max_frequency = "45s"
 
-# Use pre-defined map of phone number to OTP for testing.
-# Keys are the phone number with country code and without the + prefix.
-# [auth.sms.test_otp]
-# 14152127777 = "123456"
+# Test numbers for local development and CI only (Maestro E2E). These never reach a real
+# phone. Do NOT copy them to the production project; production test numbers, if any, are
+# set in the dashboard and removed before launch.
+[auth.sms.test_otp]
+94770000001 = "123456"
+94770000002 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
@@ -282,17 +286,26 @@ max_frequency = "60s"
 # enabled = true
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
+# ST-02: every OTP goes through our own checks (Sri Lankan mobile only, not already
+# registered, 3 per number per hour) and our own SMS provider. See private.send_sms_hook.
+[auth.hook.send_sms]
+enabled = true
+uri = "pg-functions://postgres/private/send_sms_hook"
+
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
 # [auth.hook.custom_access_token]
 # enabled = true
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
+# Placeholder provider, local/CI only. Supabase Auth refuses phone sign-in ("Unsupported
+# phone provider") unless an SMS provider is named, even when the Send SMS hook does all the
+# sending. With [auth.hook.send_sms] enabled, Twilio is never called; test numbers send
+# nothing at all. These values are not credentials.
 [auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
-# DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
+enabled = true
+account_sid = "local-placeholder"
+message_service_sid = "local-placeholder"
 auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 
 # Multi-factor-authentication is available to Supabase Pro plan.

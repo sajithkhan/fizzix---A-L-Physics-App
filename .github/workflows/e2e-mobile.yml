@@ -2,9 +2,10 @@ name: E2E (mobile)
 
 # Builds a release APK for the emulator and runs every Maestro flow in apps/mobile/e2e.
 #
-# Runs on every PR so it can be a required check. The emulator job (~20 minutes) starts only
-# when the app, shared contracts, the lockfile or this workflow changed; otherwise it is
-# skipped, and GitHub counts a skipped required check as passed.
+# Runs on every PR so it can be a required check. The emulator job (~25 minutes) starts only
+# when the app, shared contracts, database migrations or auth config, the lockfile or this
+# workflow changed; otherwise it is skipped, and GitHub counts a skipped required check as
+# passed.
 
 on:
   pull_request:
@@ -38,7 +39,7 @@ jobs:
             echo "mobile=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           if git diff --name-only "$BASE" HEAD \
-            | grep -qE '^(apps/mobile/|packages/shared/|pnpm-lock\.yaml$|\.npmrc$|\.github/workflows/e2e-mobile\.yml$)'; then
+            | grep -qE '^(apps/mobile/|packages/shared/|supabase/migrations/|supabase/config\.toml$|pnpm-lock\.yaml$|\.npmrc$|\.github/workflows/e2e-mobile\.yml$)'; then
             echo "mobile=true" >> "$GITHUB_OUTPUT"
           else
             echo "mobile=false" >> "$GITHUB_OUTPUT"
@@ -50,10 +51,6 @@ jobs:
     if: needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      # E2E runs against built-in data only; no Supabase project is reachable from CI.
-      EXPO_PUBLIC_SUPABASE_URL: ''
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: ''
     steps:
       - uses: actions/checkout@v7
 
@@ -69,6 +66,56 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
+
+      # A real local Supabase (database, auth, API) so flows test the actual server rules.
+      # Test phone numbers and their fixed OTP come from supabase/config.toml.
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.122.1
+      - name: Start local Supabase
+        env:
+          # Placeholder for the unused local Twilio entry in config.toml (not a credential).
+          SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN: local-placeholder
+        # Retries because a shared GitHub runner occasionally has a Supabase port (5432x)
+        # briefly taken; each failed try logs what holds the port, then cleans up.
+        run: |
+          for attempt in 1 2 3; do
+            if supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor; then
+              exit 0
+            fi
+            echo "::warning::supabase start failed (attempt $attempt of 3). Listening on Supabase ports:"
+            sudo ss -ltnp | grep -E ':543[0-9][0-9]\b' || true
+            supabase stop --no-backup || true
+            sleep 15
+          done
+          exit 1
+      - name: Point the test build at it
+        run: |
+          eval "$(supabase status -o env 2>/dev/null)"
+          KEY="${ANON_KEY:-$PUBLISHABLE_KEY}"
+          test -n "$KEY" || { echo "No anon key from supabase status"; exit 1; }
+          # 10.0.2.2 is the host machine as seen from the Android emulator.
+          echo "EXPO_PUBLIC_SUPABASE_URL=http://10.0.2.2:54321" >> "$GITHUB_ENV"
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$KEY" >> "$GITHUB_ENV"
+          echo "E2E_ALLOW_CLEARTEXT=1" >> "$GITHUB_ENV"
+
+      # Fails fast (before the ~15 minute Android build) if the OTP sign-up path is broken.
+      # Uses the second test number so the Maestro flow's number is untouched.
+      - name: Smoke-test OTP sign-up against the local Supabase
+        run: |
+          api=http://127.0.0.1:54321/auth/v1
+          send=$(curl -s -w '\n%{http_code}' -X POST "$api/otp" \
+            -H "apikey: $EXPO_PUBLIC_SUPABASE_ANON_KEY" -H 'Content-Type: application/json' \
+            -d '{"phone":"+94770000002","create_user":true}')
+          echo "send OTP -> $send"
+          verify=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$api/verify" \
+            -H "apikey: $EXPO_PUBLIC_SUPABASE_ANON_KEY" -H 'Content-Type: application/json' \
+            -d '{"phone":"+94770000002","token":"123456","type":"sms"}')
+          echo "verify OTP -> $verify"
+          if [ "$(echo "$send" | tail -1)" != "200" ] || [ "$verify" != "200" ]; then
+            echo "::group::auth log"; docker logs supabase_auth_fizzix --tail 80 2>&1; echo "::endgroup::"
+            exit 1
+          fi
 
       - name: Generate native Android project
         working-directory: apps/mobile
@@ -97,18 +144,22 @@ jobs:
           target: google_apis
           profile: pixel_6
           disable-animations: true
+          # More CPU and memory: the default 2 cores leave the system UI unresponsive right
+          # after boot ("Pixel Launcher isn't responding"), and that dialog hid our app.
+          cores: 4
+          ram-size: 4096M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
+            adb shell settings put global hide_error_dialogs 1
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-            maestro test apps/mobile/e2e --format junit --output maestro-report.xml --debug-output maestro-debug
+            bash apps/mobile/e2e/wait-for-idle.sh
+            bash apps/mobile/e2e/run.sh
 
       - name: Upload Maestro report and screenshots
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: maestro-results
-          path: |
-            maestro-report.xml
-            maestro-debug
+          path: maestro-results
           if-no-files-found: ignore
           retention-days: 14

@@ -28,6 +28,8 @@ const config: ExpoConfig = {
       'expo-splash-screen',
       { image: './assets/splash-icon.png', imageWidth: 96, backgroundColor: brand.colors.primary },
     ],
+    // CI end-to-end builds only: lets the app reach the local Supabase over plain HTTP.
+    ...(process.env.E2E_ALLOW_CLEARTEXT === '1' ? ['./plugins/with-e2e-cleartext.js'] : []),
   ],
   experiments: { typedRoutes: true },
 };

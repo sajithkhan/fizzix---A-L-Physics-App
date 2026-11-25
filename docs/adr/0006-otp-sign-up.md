@@ -24,8 +24,10 @@ the server, and the SMS provider (a local gateway such as Text.lk) is not chosen
 - Resend wait (45 s) is Supabase's `auth.sms.max_frequency`.
 - Hook errors are codes (`phone_not_supported`, `already_registered`, `otp_rate_limited`,
   `sms_unavailable`); the app maps them to Tamil/Sinhala text.
-- Local and CI use `[auth.sms.test_otp]` numbers (code 123456). Maestro runs against a real
-  local Supabase started in the E2E job.
+- Local and CI use `[auth.sms.test_otp]` numbers (code 123456). The same numbers are listed in
+  `app_config.otp_test_numbers` by `supabase/seed.sql` (local/CI only), so the hook lets
+  them through without calling the SMS provider. Production has no such row, so no number
+  can skip the provider there. Maestro runs against a real local Supabase in the E2E job.
 
 ## Consequences
 

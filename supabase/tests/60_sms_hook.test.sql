@@ -7,7 +7,7 @@
 --   * fail closed when no SMS provider is configured
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(19);
 
 create function pg_temp.event(p_phone text, p_otp text default '123456') returns jsonb
 language sql as $$
@@ -94,6 +94,19 @@ select is(pg_temp.err(private.send_sms_hook(pg_temp.event('94776666666'))), 'otp
 update private.sms_requests set requested_at = now() - interval '61 minutes';
 select is(private.send_sms_hook(pg_temp.event('94776666666')), '{}'::jsonb,
   'an hour later the number can get an OTP again');
+
+-- Local/CI test numbers --------------------------------------------------------------------------
+-- Numbers listed in app_config.otp_test_numbers (seeded only by supabase/seed.sql, never in
+-- production) pass the checks but are not handed to the SMS provider: Supabase uses the fixed
+-- test OTP from config.toml for them.
+insert into public.app_config (key, value) values ('otp_test_numbers', '["94770000001"]')
+on conflict (key) do update set value = excluded.value;
+truncate pg_temp.sent;
+
+select is(private.send_sms_hook(pg_temp.event('94770000001')), '{}'::jsonb,
+  'a configured test number succeeds');
+select is((select count(*)::int from pg_temp.sent), 0,
+  'a configured test number is never sent to the SMS provider');
 
 -- Privacy -----------------------------------------------------------------------------------------
 select ok(

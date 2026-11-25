@@ -65,8 +65,9 @@ enabled = true
 schema_paths = []
 
 [db.seed]
-# Reference data (locales, brand, subjects) ships in migrations; there is no dev seed yet.
-enabled = false
+# Local/CI only (never production): test phone numbers for the OTP flow. Reference data
+# (locales, brand, subjects) ships in migrations, not here.
+enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
 sql_paths = ["./seed.sql"]

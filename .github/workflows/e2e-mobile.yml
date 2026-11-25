@@ -114,15 +114,13 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-            maestro test apps/mobile/e2e --format junit --output maestro-report.xml --debug-output maestro-debug || { echo "::group::Diagnostics: screen"; maestro hierarchy | grep -oE '"(text|resource-id)" *: *"[^"]+"' | head -80; echo "::endgroup::"; echo "::group::Diagnostics: app log"; adb logcat -d | grep -E "ReactNativeJS|AndroidRuntime|FATAL|lk.fizzix" | tail -150; echo "::endgroup::"; exit 1; }
+            bash apps/mobile/e2e/run.sh
 
       - name: Upload Maestro report and screenshots
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: maestro-results
-          path: |
-            maestro-report.xml
-            maestro-debug
+          path: maestro-results
           if-no-files-found: ignore
           retention-days: 14

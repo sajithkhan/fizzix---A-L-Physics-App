@@ -28,6 +28,9 @@ tags:
 - assertVisible:
     id: register-error
 - assertVisible: '.*07X XXX XXXX.*'
+# Focus the number field again before clearing it (the tap above moved focus to the button).
+- tapOn:
+    id: register-phone
 - eraseText: 20
 
 # AC1: a valid number gets an OTP and the code boxes appear.
@@ -58,8 +61,10 @@ tags:
     id: register-screen
 
 # AC2: the correct code verifies the number and opens account creation.
+# Re-focus the code field (it usually still has focus; the tap is a safety net).
 - tapOn:
     id: register-otp-boxes
+    optional: true
 - eraseText: 6
 - inputText: '123456'
 - hideKeyboard

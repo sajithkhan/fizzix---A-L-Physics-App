@@ -82,6 +82,15 @@ begin
 
   insert into private.sms_requests (phone_hash) values (v_hash);
 
+  -- Local/CI test numbers (seed.sql only): Supabase uses the fixed OTP from config.toml,
+  -- so nothing is sent. Production has no otp_test_numbers row.
+  if exists (
+    select 1 from public.app_config c
+    where c.key = 'otp_test_numbers' and c.value ? v_phone
+  ) then
+    return '{}'::jsonb;
+  end if;
+
   if not private.deliver_sms(v_phone, v_otp) then
     return jsonb_build_object('error', jsonb_build_object('http_code', 503, 'message', 'sms_unavailable'));
   end if;

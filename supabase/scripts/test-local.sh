@@ -24,6 +24,8 @@ for f in "$ROOT"/supabase/migrations/*.sql; do
   echo "migrate: $(basename "$f")"
   "${PSQL[@]}" -f "$f"
 done
+# Same as `supabase start`: the local/CI seed runs after the migrations.
+if [ -f "$ROOT/supabase/seed.sql" ]; then echo "seed: seed.sql"; "${PSQL[@]}" -f "$ROOT/supabase/seed.sql"; fi
 "${PSQL[@]}" -c "create extension if not exists pgtap with schema extensions;"
 
 FAILED=0

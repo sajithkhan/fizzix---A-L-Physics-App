@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -53,7 +53,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.122.1 # pinned: "latest" calls the GitHub API and can hit rate limits
       - run: supabase db start
       - name: Lint SQL (security definer, search_path, etc.)
         run: supabase db lint --level error --fail-on error

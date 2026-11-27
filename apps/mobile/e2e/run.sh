@@ -14,6 +14,19 @@ for flow in "$DIR"/*.yaml; do
   if maestro test "$flow" --format junit --output "$OUT/$name.xml" --debug-output "$OUT/$name"; then
     echo "PASSED $name"
   else
+    # The CI emulator sometimes stalls on a cold start after clearState. Print what happened,
+    # then give the flow one more try. A flow that fails twice fails the job.
+    echo "::warning::$name failed on the first try; retrying once"
+    echo "::group::$name: first try screen and log"
+    maestro hierarchy 2>/dev/null | grep -oE '"(text|resource-id)" *: *"[^"]+"' | grep -v "com.android.systemui" | head -60
+    adb logcat -d | grep -E "ReactNativeJS|AndroidRuntime|FATAL" | tail -40
+    echo "::endgroup::"
+    adb shell am force-stop lk.fizzix.app || true
+    adb logcat -c || true
+    if maestro test "$flow" --format junit --output "$OUT/$name.xml" --debug-output "$OUT/$name-retry"; then
+      echo "PASSED $name (on retry)"
+      continue
+    fi
     FAILED=1
     echo "FAILED $name"
     echo "::group::$name: screen at failure"

@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Redirect, type Href } from 'expo-router';
 import { useLocaleState } from '@/features/language/locale-context';
-import { hasSession } from '@/lib/session';
+import { getAuthState } from '@/lib/session';
 import { Loading } from '@/components/loading';
+
+const TARGET = {
+  signed_out: '/register',
+  needs_account: '/account-setup',
+  complete: '/home',
+} as const satisfies Record<string, Href>;
 
 /**
  * Entry. First launch: language (ST-01). No session: registration (ST-02). Verified number
- * but no account yet: account creation (ST-04). Login (ST-54) and home join this as they land.
+ * without an account: account creation (ST-04). Finished account: home. Login (ST-54) joins
+ * this when it lands.
  */
 export default function Index() {
   const { saved } = useLocaleState();
@@ -18,8 +25,8 @@ export default function Index() {
       return;
     }
     let active = true;
-    void hasSession().then((signedIn) => {
-      if (active) setTarget(signedIn ? '/account-setup' : '/register');
+    void getAuthState().then((state) => {
+      if (active) setTarget(TARGET[state]);
     });
     return () => {
       active = false;

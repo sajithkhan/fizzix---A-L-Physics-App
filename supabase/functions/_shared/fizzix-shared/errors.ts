@@ -1,0 +1,95 @@
+/**
+ * Error codes the backend may return. Clients map these to translated messages
+ * (`errors.<code>` in the ta/si translation files). Never show raw server text to users.
+ */
+export const ERROR_CODES = [
+  'not_authenticated',
+  'invalid_input',
+  'invalid_size',
+  'invalid_option',
+  'unknown_unit',
+  'locale_not_available',
+  'phone_not_supported',
+  'already_registered',
+  'otp_rate_limited',
+  'otp_resend_wait',
+  'otp_invalid',
+  'sms_unavailable',
+  'invalid_name',
+  'invalid_username',
+  'invalid_exam_year',
+  'invalid_school',
+  'username_taken',
+  'weak_password',
+  'details_missing',
+  'password_not_set',
+  'account_already_completed',
+  'notice_outdated',
+  'invalid_age_band',
+  'consent_missing',
+  'invalid_credentials',
+  'login_locked',
+  'unknown_item',
+  'already_answered',
+  'daily_limit_reached',
+  'rate_limited',
+  'premium_required',
+  'answer_key_missing',
+  'internal',
+] as const;
+
+export type ErrorCode = (typeof ERROR_CODES)[number];
+
+/** HTTP status each code maps to when returned by an Edge Function. */
+export const ERROR_STATUS: Record<ErrorCode, number> = {
+  not_authenticated: 401,
+  invalid_input: 400,
+  invalid_size: 400,
+  invalid_option: 400,
+  unknown_unit: 404,
+  locale_not_available: 400,
+  phone_not_supported: 400,
+  already_registered: 409,
+  otp_rate_limited: 429,
+  otp_resend_wait: 429,
+  otp_invalid: 400,
+  sms_unavailable: 503,
+  invalid_name: 400,
+  invalid_username: 400,
+  invalid_exam_year: 400,
+  invalid_school: 400,
+  username_taken: 409,
+  weak_password: 400,
+  details_missing: 400,
+  password_not_set: 400,
+  account_already_completed: 409,
+  notice_outdated: 409,
+  invalid_age_band: 400,
+  consent_missing: 400,
+  invalid_credentials: 401,
+  login_locked: 429,
+  unknown_item: 404,
+  already_answered: 409,
+  daily_limit_reached: 402,
+  rate_limited: 429,
+  premium_required: 402,
+  answer_key_missing: 500,
+  internal: 500,
+};
+
+export function isErrorCode(value: unknown): value is ErrorCode {
+  return typeof value === 'string' && (ERROR_CODES as readonly string[]).includes(value);
+}
+
+/**
+ * Maps a Postgres/PostgREST error to a safe error code. SQL functions raise the code
+ * itself as the message, so anything else (constraint text, stack traces) becomes `internal`.
+ */
+export function toErrorCode(error: { message?: unknown } | null | undefined): ErrorCode {
+  const message = error?.message;
+  return isErrorCode(message) ? message : 'internal';
+}
+
+export interface ApiError {
+  error: { code: ErrorCode };
+}

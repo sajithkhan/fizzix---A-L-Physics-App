@@ -74,7 +74,7 @@ tags:
     id: register-verify
 - extendedWaitUntil:
     visible:
-      id: account-setup-screen
+      id: account-screen
     timeout: 20000
 
 # The verified session survives a restart: the student resumes at account creation.
@@ -82,5 +82,5 @@ tags:
 - launchApp
 - extendedWaitUntil:
     visible:
-      id: account-setup-screen
+      id: account-screen
     timeout: 30000

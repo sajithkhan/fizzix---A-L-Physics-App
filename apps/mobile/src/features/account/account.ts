@@ -59,7 +59,8 @@ export function toAccountError(error: unknown): AccountError {
   ) {
     return 'network';
   }
-  console.warn('[account] unexpected error', { code: e.code ?? null, status: e.status ?? null });
+  // No logging here: this error can come from the password call (security rule: logs never
+  // touch passwords). The screen records the error code through analytics instead.
   return 'internal';
 }
 

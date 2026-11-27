@@ -1,7 +1,7 @@
 # ST-04 · Create my account — end to end against a local Supabase.
 # Signs up test number 0770000003 (OTP 123456, see supabase/config.toml), then creates the
-# account. Keyboard: tap a label or title to close it (hideKeyboard presses Back, which would
-# close the app on these screens).
+# account. Keyboard: press Enter to close it (hideKeyboard presses Back, which would close
+# the app on these screens).
 appId: lk.fizzix.app
 name: ST-04 Create my account
 tags:
@@ -43,29 +43,31 @@ tags:
     timeout: 20000
 - assertVisible: '.*77 000 0003.*'
 
-# After each field, tap its label to close the keyboard so the next field is not hidden.
+# After each field, press Enter: a single-line input blurs on submit, so the keyboard closes
+# and the next field is not hidden. (Tapping a label can hit the input itself, which shares
+# the label as its accessibility label, and keeps the keyboard open.)
 - tapOn:
     id: account-name
 - inputText: 'Arjun Kumar'
-- tapOn: '^பெயர்$'
+- pressKey: Enter
 - tapOn:
     id: account-username
 - inputText: 'arjun_e2e'
-- tapOn: '^Username.*'
+- pressKey: Enter
 - scrollUntilVisible:
     element:
       id: account-password
 - tapOn:
     id: account-password
 - inputText: 'physics26'
-- tapOn: '^Password$'
+- pressKey: Enter
 - scrollUntilVisible:
     element:
       id: account-confirm
 - tapOn:
     id: account-confirm
 - inputText: 'physics99'
-- tapOn: '^Password-ஐ உறுதிசெய்$'
+- pressKey: Enter
 
 # AC3: the username is checked against the server.
 - extendedWaitUntil:
@@ -95,7 +97,8 @@ tags:
     id: account-confirm
 - eraseText: 12
 - inputText: 'physics26'
-- tapOn: '.*பொருந்துகின்றன.*'
+- pressKey: Enter
+- assertVisible: '.*பொருந்துகின்றன.*'
 
 # AC4: the account is created and home opens, signed in.
 - scrollUntilVisible:

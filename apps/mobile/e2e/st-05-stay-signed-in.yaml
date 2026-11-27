@@ -1,0 +1,172 @@
+# ST-05 · Stay signed in — end to end against a local Supabase. Creates an account for test
+# number 0770000006 (OTP 123456, see supabase/config.toml), restarts the app (straight to
+# home), logs out, checks that sign-up sends no new OTP to this number, and logs back in with
+# the password. Keyboard: Enter closes it (hideKeyboard presses Back, which closes the app).
+appId: lk.fizzix.app
+name: ST-05 Stay signed in
+tags:
+  - ST-05
+---
+# Wipe the app the reliable way: stop it, clear its data, then start it. Starting right
+# after a wipe can take over a minute on the CI emulator, hence the longer wait.
+- stopApp
+- clearState
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: language-screen
+    timeout: 120000
+- tapOn:
+    id: language-continue
+
+# Sign up once (ST-02, ST-04, ST-58).
+- extendedWaitUntil:
+    visible:
+      id: register-screen
+    timeout: 20000
+- tapOn:
+    id: register-phone
+- inputText: '0770000006'
+- tapOn: 'புதிய கணக்கு'
+- tapOn:
+    id: register-send-otp
+- extendedWaitUntil:
+    visible:
+      id: register-verify
+    timeout: 20000
+- inputText: '123456'
+- tapOn: 'புதிய கணக்கு'
+- tapOn:
+    id: register-verify
+- extendedWaitUntil:
+    visible:
+      id: account-screen
+    timeout: 20000
+- tapOn:
+    id: account-name
+- inputText: 'Thara Silva'
+- pressKey: Enter
+- tapOn:
+    id: account-username
+- inputText: 'thara_e2e'
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: account-password
+- tapOn:
+    id: account-password
+- inputText: 'physics26'
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: account-confirm
+- tapOn:
+    id: account-confirm
+- inputText: 'physics26'
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: account-year-2027
+- tapOn:
+    id: account-year-2027
+- tapOn:
+    id: account-stream-maths
+- scrollUntilVisible:
+    element:
+      id: account-age-16_plus
+- tapOn:
+    id: account-age-16_plus
+- scrollUntilVisible:
+    element:
+      id: account-privacy-accept
+- tapOn:
+    id: account-privacy-accept
+- scrollUntilVisible:
+    element:
+      id: account-submit
+- tapOn:
+    id: account-submit
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 20000
+
+# AC1: close and reopen, twice: straight to home each time.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 30000
+- assertNotVisible:
+    id: login-screen
+
+# AC2: after logout the app opens on login.
+- tapOn:
+    id: home-logout
+- extendedWaitUntil:
+    visible:
+      id: login-screen
+    timeout: 20000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: login-screen
+    timeout: 30000
+
+# No OTP for a registered number: sign-up refuses to send one and points to login.
+- tapOn:
+    id: login-register-link
+- extendedWaitUntil:
+    visible:
+      id: register-screen
+    timeout: 20000
+- tapOn:
+    id: register-phone
+- inputText: '0770000006'
+- tapOn: 'புதிய கணக்கு'
+- tapOn:
+    id: register-send-otp
+- extendedWaitUntil:
+    visible:
+      id: register-error
+    timeout: 20000
+- assertVisible: '.*ஏற்கனவே கணக்கு உள்ளது.*'
+- assertNotVisible:
+    id: register-verify
+
+# Number and password sign in again, and the session survives a restart.
+- scrollUntilVisible:
+    element:
+      id: register-login-link
+- tapOn:
+    id: register-login-link
+- extendedWaitUntil:
+    visible:
+      id: login-screen
+    timeout: 20000
+- tapOn:
+    id: login-phone
+- inputText: '0770000006'
+- pressKey: Enter
+- tapOn:
+    id: login-password
+- inputText: 'physics26'
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 20000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 30000

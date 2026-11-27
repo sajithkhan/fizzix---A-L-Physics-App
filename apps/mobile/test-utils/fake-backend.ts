@@ -21,6 +21,8 @@ export interface FakeBackendOptions {
   loginErrorCode?: string;
   /** Start without a session (signed out). */
   signedOut?: boolean;
+  /** Logging out fails as if offline. */
+  signOutError?: boolean;
   completeError?: FakeError;
   examYears?: number[];
   notice?: { version: string; url: string } | null;
@@ -34,6 +36,7 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
     rpc: [] as Array<[string, unknown]>,
     functions: [] as Array<[string, unknown]>,
     setSession: [] as unknown[],
+    signOut: [] as unknown[],
   };
   let completed = opts.completed ?? false;
   let notice = opts.notice === undefined ? NOTICE : opts.notice;
@@ -119,6 +122,14 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
         Promise.resolve({
           data: { session: signedIn ? { user: { id: 'u1', phone: '94770000003' } } : null },
         }),
+      signOut: (args: unknown) => {
+        calls.signOut.push(args);
+        if (opts.signOutError) {
+          return Promise.resolve({ error: { name: 'AuthRetryableFetchError', status: 0 } });
+        }
+        signedIn = false;
+        return Promise.resolve({ error: null });
+      },
       setSession: (args: unknown) => {
         calls.setSession.push(args);
         signedIn = true;

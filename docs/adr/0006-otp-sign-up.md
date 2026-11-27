@@ -38,7 +38,7 @@ the server, and the SMS provider (a local gateway such as Text.lk) is not chosen
   scheduled jobs are introduced; until then the table only grows by real sign-up attempts.
 - Password reset (ST-55) must add a "reset requested" path: today registered numbers never
   get a code.
-- Sessions are stored with AsyncStorage until ST-05 moves them to secure storage.
+- Sessions are stored in secure storage since ST-05 (ADR-0010).
 - `config.toml` test numbers must never be copied to the production project.
 - Supabase Auth needs an SMS provider named before phone sign-in works, even with the hook.
   Locally that is a placeholder Twilio entry (never called). In production, name the real

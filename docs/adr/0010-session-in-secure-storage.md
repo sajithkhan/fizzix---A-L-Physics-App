@@ -25,4 +25,4 @@ token) was kept in AsyncStorage, which is plain files on the device.
 ## Consequences
 
 - Clearing app data or reinstalling always means logging in again.
-- Settings (Screen 9) will take over the logout button from the home placeholder.
+- Logout moved to Settings (Screen 9) with a confirm step in ST-07.

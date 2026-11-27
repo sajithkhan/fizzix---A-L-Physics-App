@@ -1,6 +1,8 @@
 # Mobile end-to-end tests (Maestro)
 
-One flow file per story, named `st-xx-<slug>.yaml`, tagged with the story ID.
+One flow file per story, named `st-xx-<slug>.yaml`, tagged with the story ID. Shared steps
+(sign up a test number, log out) live in `subflows/` and are called with `runFlow`; Maestro
+runs only the top-level files as tests.
 
 Run locally against an Android emulator or device with the app installed:
 

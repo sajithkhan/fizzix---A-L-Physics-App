@@ -9,95 +9,15 @@ tags:
   - ST-54
 ---
 # Set up: a finished account (ST-02, ST-04, ST-58).
-# Wipe the app the reliable way: stop it, clear its data, then start it. Starting right
-# after a wipe can take over a minute on the CI emulator, hence the longer wait.
-- stopApp
-- clearState
-- launchApp
-- extendedWaitUntil:
-    visible:
-      id: language-screen
-    timeout: 120000
-- tapOn:
-    id: language-continue
-- extendedWaitUntil:
-    visible:
-      id: register-screen
-    timeout: 20000
-- tapOn:
-    id: register-phone
-- inputText: '0770000005'
-- tapOn: 'புதிய கணக்கு'
-- tapOn:
-    id: register-send-otp
-- extendedWaitUntil:
-    visible:
-      id: register-verify
-    timeout: 20000
-- inputText: '123456'
-- tapOn: 'புதிய கணக்கு'
-- tapOn:
-    id: register-verify
-- extendedWaitUntil:
-    visible:
-      id: account-screen
-    timeout: 20000
-- tapOn:
-    id: account-name
-- inputText: 'Kavin Raj'
-- pressKey: Enter
-- tapOn:
-    id: account-username
-- inputText: 'kavin_e2e'
-- pressKey: Enter
-- scrollUntilVisible:
-    element:
-      id: account-password
-- tapOn:
-    id: account-password
-- inputText: 'physics26'
-- pressKey: Enter
-- scrollUntilVisible:
-    element:
-      id: account-confirm
-- tapOn:
-    id: account-confirm
-- inputText: 'physics26'
-- pressKey: Enter
-- scrollUntilVisible:
-    element:
-      id: account-year-2027
-- tapOn:
-    id: account-year-2027
-- tapOn:
-    id: account-stream-bio
-- scrollUntilVisible:
-    element:
-      id: account-age-16_plus
-- tapOn:
-    id: account-age-16_plus
-- scrollUntilVisible:
-    element:
-      id: account-privacy-accept
-- tapOn:
-    id: account-privacy-accept
-- scrollUntilVisible:
-    element:
-      id: account-submit
-- tapOn:
-    id: account-submit
-- extendedWaitUntil:
-    visible:
-      id: home-screen
-    timeout: 20000
+- runFlow:
+    file: subflows/sign-up.yaml
+    env:
+      PHONE: '0770000005'
+      NAME: 'Kavin Raj'
+      USERNAME: 'kavin_e2e'
 
-# Log out (ST-05): the app now opens on login. AC4: login and sign-up link to each other.
-- tapOn:
-    id: home-logout
-- extendedWaitUntil:
-    visible:
-      id: login-screen
-    timeout: 20000
+# Log out (ST-07): the app now opens on login. AC4: login and sign-up link to each other.
+- runFlow: subflows/log-out.yaml
 - tapOn:
     id: login-register-link
 - extendedWaitUntil:
@@ -153,12 +73,7 @@ tags:
     timeout: 30000
 
 # AC3: five wrong tries lock the number; even the right password is refused for 15 minutes.
-- tapOn:
-    id: home-logout
-- extendedWaitUntil:
-    visible:
-      id: login-screen
-    timeout: 20000
+- runFlow: subflows/log-out.yaml
 - tapOn:
     id: login-phone
 - inputText: '0770000005'

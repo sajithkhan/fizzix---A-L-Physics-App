@@ -59,6 +59,9 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
             data: {
               account_completed_at: completed ? '2026-11-27T10:00:00Z' : null,
               age_band: ageBand,
+              display_name: completed ? 'Arjun Kumar' : null,
+              exam_year: completed ? 2027 : null,
+              stream: completed ? 'bio' : null,
             },
             error: null,
           });

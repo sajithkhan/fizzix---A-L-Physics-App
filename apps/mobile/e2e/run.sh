@@ -4,15 +4,45 @@
 # 1. All flows in ONE `maestro test` session. Starting Maestro takes ~55 seconds on the CI
 #    emulator (driver install and connect), so one session per flow made the next flow's
 #    first wait time out. One session pays that cost once.
-# 2. Any flow that failed gets one more try on its own (the emulator can still hiccup). A
-#    flow that fails twice fails the job, and its screen and app log are printed.
+# 2. Any flow that failed gets one more try on its own, after resetting the test accounts and
+#    reinstalling the app (the emulator can still hiccup). A flow that fails twice fails the
+#    job, and its screen and app log are printed.
 #
 # Usage: bash apps/mobile/e2e/run.sh   (emulator running, app installed)
 set -u
 DIR="$(cd "$(dirname "$0")" && pwd)"
 OUT="${MAESTRO_OUT:-maestro-results}"
+APK="${APK:-$DIR/../android/app/build/outputs/apk/release/app-release.apk}"
+APP_ID=lk.fizzix.app
+DB_CONTAINER="${DB_CONTAINER:-supabase_db_fizzix}"
 mkdir -p "$OUT"
 
+# Flows sign up the test numbers from supabase/config.toml. Before a run (and before a
+# retry) remove those accounts and the lockout / rate-limit counters, so a flow that failed
+# halfway can start again from nothing. Local Supabase only: test numbers never exist in
+# production.
+reset_test_data() {
+  if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$DB_CONTAINER"; then
+    echo "::warning::$DB_CONTAINER not running; test data not reset"
+    return 0
+  fi
+  docker exec -i "$DB_CONTAINER" psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL' >/dev/null
+delete from auth.users where phone like '9477000000_';
+delete from private.login_failures;
+delete from private.login_ip_hits;
+delete from private.rate_limits;
+delete from private.sms_requests;
+SQL
+}
+
+# A clean app without `pm clear`, which sometimes stalls for over a minute on the emulator.
+fresh_install() {
+  adb shell am force-stop "$APP_ID" || true
+  adb uninstall "$APP_ID" >/dev/null 2>&1 || true
+  adb install "$APK" >/dev/null
+}
+
+reset_test_data
 adb logcat -c || true
 if maestro test "$DIR" --format junit --output "$OUT/all.xml" --debug-output "$OUT/all"; then
   echo "PASSED all flows in one session"
@@ -60,7 +90,8 @@ FAILED=0
 for flow in $failed; do
   name="$(basename "$flow" .yaml)"
   echo "::warning::$name failed in the combined run; retrying it once on its own"
-  adb shell am force-stop lk.fizzix.app || true
+  reset_test_data
+  fresh_install
   adb logcat -c || true
   if maestro test "$flow" --format junit --output "$OUT/$name-retry.xml" --debug-output "$OUT/$name-retry"; then
     echo "PASSED $name (on retry)"

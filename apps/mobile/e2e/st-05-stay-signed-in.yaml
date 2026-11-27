@@ -1,7 +1,6 @@
 # ST-05 · Stay signed in — end to end against a local Supabase. Creates an account for test
 # number 0770000006 (OTP 123456, see supabase/config.toml), restarts the app (straight to
-# home), logs out, checks that sign-up sends no new OTP to this number, and logs back in with
-# the password. Keyboard: Enter closes it (hideKeyboard presses Back, which closes the app).
+# home), logs out, and logs back in with the password. Keyboard: Enter closes it (hideKeyboard presses Back, which closes the app).
 appId: lk.fizzix.app
 name: ST-05 Stay signed in
 tags:
@@ -121,37 +120,10 @@ tags:
       id: login-screen
     timeout: 30000
 
-# No OTP for a registered number: sign-up refuses to send one and points to login.
-- tapOn:
-    id: login-register-link
-- extendedWaitUntil:
-    visible:
-      id: register-screen
-    timeout: 20000
-- tapOn:
-    id: register-phone
-- inputText: '0770000006'
-- tapOn: 'புதிய கணக்கு'
-- tapOn:
-    id: register-send-otp
-- extendedWaitUntil:
-    visible:
-      id: register-error
-    timeout: 20000
-- assertVisible: '.*ஏற்கனவே கணக்கு உள்ளது.*'
-- assertNotVisible:
-    id: register-verify
+# "No OTP" for a registered number is the SMS hook's job (pgTAP: 60_sms_hook, 70_account).
+# Supabase skips the hook for the local test numbers, so it cannot be shown here.
 
 # Number and password sign in again, and the session survives a restart.
-- scrollUntilVisible:
-    element:
-      id: register-login-link
-- tapOn:
-    id: register-login-link
-- extendedWaitUntil:
-    visible:
-      id: login-screen
-    timeout: 20000
 - tapOn:
     id: login-phone
 - inputText: '0770000006'

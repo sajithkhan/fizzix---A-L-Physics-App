@@ -4,7 +4,7 @@
 -- student can never end up registered without a way to log in.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(24);
 
 insert into auth.users (id, phone) values
   ('11111111-1111-1111-1111-111111111111', '94770000011'),
@@ -68,7 +68,12 @@ where id = '11111111-1111-1111-1111-111111111111';
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111"}', true);
 
-select lives_ok($$ select public.complete_account() $$, 'with details and a password the account is completed');
+select throws_ok($$ select public.complete_account() $$,
+  'P0001', 'consent_missing', 'an account without privacy consent cannot be completed (ST-58)');
+select lives_ok(
+  $$ select public.record_consent((select value ->> 'version' from public.app_config where key = 'privacy_notice'), '16_plus') $$,
+  'privacy notice accepted');
+select lives_ok($$ select public.complete_account() $$, 'with details, a password and consent the account is completed');
 select isnt(
   (select account_completed_at from public.profiles where id = '11111111-1111-1111-1111-111111111111'),
   null, 'the completion time is recorded'

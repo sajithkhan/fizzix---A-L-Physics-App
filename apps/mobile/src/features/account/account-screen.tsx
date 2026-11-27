@@ -8,6 +8,8 @@ import {
   isValidUsername,
   passwordIssue,
   SCHOOL_MAX,
+  type AgeBand,
+  type PrivacyNotice,
 } from '@fizzix/shared';
 import { Screen } from '@/components/screen';
 import { PrimaryButton } from '@/components/primary-button';
@@ -25,10 +27,22 @@ import {
   type AccountError,
   type Stream,
 } from './account';
+import { loadPrivacyNotice, type ConsentError } from '@/features/consent/consent';
+import { AgeRange, PrivacyConsent } from '@/features/consent/privacy-consent';
 
-type FieldError = AccountError | 'too_short' | 'needs_letter' | 'needs_digit' | 'mismatch';
+type FieldError =
+  AccountError | ConsentError | 'too_short' | 'needs_letter' | 'needs_digit' | 'mismatch';
 
-type Field = 'name' | 'username' | 'password' | 'confirm' | 'examYear' | 'stream' | 'school';
+type Field =
+  | 'name'
+  | 'username'
+  | 'password'
+  | 'confirm'
+  | 'examYear'
+  | 'stream'
+  | 'ageBand'
+  | 'school'
+  | 'privacy';
 
 const FIELD_OF: Partial<Record<FieldError, Field>> = {
   invalid_name: 'name',
@@ -42,11 +56,17 @@ const FIELD_OF: Partial<Record<FieldError, Field>> = {
   invalid_exam_year: 'examYear',
   invalid_stream: 'stream',
   invalid_school: 'school',
+  invalid_age_band: 'ageBand',
+  consent_missing: 'privacy',
+  notice_outdated: 'privacy',
 };
+
+/** Field errors that live in the consent.* translations rather than account.*. */
+const CONSENT_FIELDS: readonly Field[] = ['ageBand', 'privacy'];
 
 /**
  * ST-04 · Screen 1b, step 2 of 2. Name, username, password, exam year, stream, school.
- * Age and privacy consent are added to this screen by ST-58.
+ * ST-58 · age range and privacy consent on the same screen.
  */
 export function AccountScreen() {
   const { t } = useTranslation();
@@ -63,6 +83,9 @@ export function AccountScreen() {
   const [examYear, setExamYear] = useState<number | null>(null);
   const [stream, setStream] = useState<Stream | null>(null);
   const [school, setSchool] = useState('');
+  const [ageBand, setAgeBand] = useState<AgeBand | null>(null);
+  const [notice, setNotice] = useState<PrivacyNotice | null>(null);
+  const [accepted, setAccepted] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<Field, FieldError>>>({});
   const [formError, setFormError] = useState<AccountError | null>(null);
   const [busy, setBusy] = useState(false);
@@ -70,6 +93,7 @@ export function AccountScreen() {
   useEffect(() => {
     void sessionPhone().then(setPhone);
     void loadExamYears().then(setYears);
+    void loadPrivacyNotice().then(setNotice);
   }, []);
 
   // Live username check, debounced so we don't call the server on every key.
@@ -103,7 +127,9 @@ export function AccountScreen() {
     else if (confirm !== password) found.confirm = 'mismatch';
     if (examYear === null) found.examYear = 'invalid_exam_year';
     if (stream === null) found.stream = 'invalid_stream';
+    if (ageBand === null) found.ageBand = 'invalid_age_band';
     if (school.trim().length > SCHOOL_MAX) found.school = 'invalid_school';
+    if (!accepted) found.privacy = 'consent_missing';
     return found;
   };
 
@@ -111,27 +137,54 @@ export function AccountScreen() {
     if (busy) return;
     const found = validate();
     setErrors(found);
-    if (Object.keys(found).length > 0 || examYear === null || stream === null) return;
+    if (Object.keys(found).length > 0 || examYear === null || stream === null || !ageBand) return;
 
     setBusy(true);
     setFormError(null);
-    const result = await createAccount({ name, username, password, examYear, stream, school });
+    const current = notice ?? (await loadPrivacyNotice());
+    if (!current) {
+      setBusy(false);
+      setFormError('network');
+      return;
+    }
+    setNotice(current);
+    const result = await createAccount({
+      name,
+      username,
+      password,
+      examYear,
+      stream,
+      school,
+      ageBand,
+      noticeVersion: current.version,
+    });
     setBusy(false);
     if (!result.ok) {
       analytics.track('account_create_failed', { reason: result.error });
+      if (result.error === 'notice_outdated') {
+        // The notice changed while they were filling in: show the new one and ask again.
+        setAccepted(false);
+        void loadPrivacyNotice().then(setNotice);
+      }
       const field = FIELD_OF[result.error];
       if (field) setErrors({ [field]: result.error });
-      else setFormError(result.error);
+      else setFormError(result.error as AccountError); // network / internal / session_expired
       if (result.error === 'session_expired') router.replace('/register');
       return;
     }
+    analytics.track('consent_accepted', { notice_version: current.version, age_band: ageBand });
     analytics.track('account_created', { exam_year: examYear, stream });
     router.replace('/home');
   };
 
+  const errorText = (field: Field, code: FieldError) =>
+    CONSENT_FIELDS.includes(field)
+      ? t(`consent.errors.${code as ConsentError}`)
+      : t(`account.errors.${code as AccountError}`);
+
   const err = (field: Field) => {
     const code = errors[field];
-    return code ? { kind: 'error' as const, text: t(`account.errors.${code}`) } : null;
+    return code ? { kind: 'error' as const, text: errorText(field, code) } : null;
   };
 
   const usernameStatus =
@@ -233,7 +286,7 @@ export function AccountScreen() {
       />
       {errors.examYear ? (
         <Text style={[styles.inlineError, { color: colors.danger }]}>
-          {t(`account.errors.${errors.examYear}`)}
+          {errorText('examYear', errors.examYear)}
         </Text>
       ) : null}
       <ChoiceChips
@@ -251,9 +304,18 @@ export function AccountScreen() {
       />
       {errors.stream ? (
         <Text style={[styles.inlineError, { color: colors.danger }]}>
-          {t(`account.errors.${errors.stream}`)}
+          {errorText('stream', errors.stream)}
         </Text>
       ) : null}
+      <AgeRange
+        prefix="account"
+        value={ageBand}
+        onChange={(band) => {
+          setAgeBand(band);
+          clear('ageBand');
+        }}
+        error={errors.ageBand ? errorText('ageBand', errors.ageBand) : null}
+      />
       <TextField
         testID="account-school"
         label={t('account.school')}
@@ -265,6 +327,17 @@ export function AccountScreen() {
         }}
         maxLength={SCHOOL_MAX + 10}
         status={err('school')}
+      />
+
+      <PrivacyConsent
+        prefix="account"
+        notice={notice}
+        accepted={accepted}
+        onAcceptedChange={(value) => {
+          setAccepted(value);
+          clear('privacy');
+        }}
+        error={errors.privacy ? errorText('privacy', errors.privacy) : null}
       />
 
       {formError ? (

@@ -36,10 +36,11 @@ select is((select display_name from public.profiles where id = '22222222-2222-22
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111"}', true);
 
-select lives_ok(
+select throws_ok(
   $$ insert into public.consents (user_id, notice_version, age_band)
      values ('11111111-1111-1111-1111-111111111111', '2026-12', '16_plus') $$,
-  'student can record their own consent'
+  '42501', null,
+  'student records consent only through record_consent (ST-58), not directly'
 );
 
 select throws_ok(

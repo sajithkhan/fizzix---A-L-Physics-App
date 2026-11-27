@@ -32,6 +32,8 @@ export interface Palette {
   danger: string;
   dangerBg: string;
   success: string;
+  /** Notices that need attention but are not errors (e.g. under-16 parent note). */
+  warning: string;
 }
 
 export const palettes: { light: Palette; dark: Palette } = {
@@ -63,6 +65,7 @@ export const palettes: { light: Palette; dark: Palette } = {
     danger: '#B91C1C',
     dangerBg: '#FEF2F2',
     success: '#15803D',
+    warning: '#9A3412',
   },
   dark: {
     background: '#0B1220',
@@ -92,6 +95,7 @@ export const palettes: { light: Palette; dark: Palette } = {
     danger: '#F87171',
     dangerBg: '#2A1215',
     success: '#4ADE80',
+    warning: '#FDBA74',
   },
 };
 

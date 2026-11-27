@@ -7,12 +7,14 @@ import { Loading } from '@/components/loading';
 const TARGET = {
   signed_out: '/register',
   needs_account: '/account-setup',
+  needs_consent: '/consent',
   complete: '/home',
 } as const satisfies Record<string, Href>;
 
 /**
  * Entry. First launch: language (ST-01). No session: registration (ST-02). Verified number
- * without an account: account creation (ST-04). Finished account: home. Login (ST-54) joins
+ * without an account: account creation (ST-04). Finished account with an old privacy notice:
+ * accept the new one (ST-58). Finished account: home. Login (ST-54) joins
  * this when it lands.
  */
 export default function Index() {

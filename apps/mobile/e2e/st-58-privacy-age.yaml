@@ -1,0 +1,121 @@
+# ST-58 · Agree to privacy and confirm age at sign-up — end to end against a local Supabase.
+# Signs up test number 0770000004 (OTP 123456, see supabase/config.toml), fills the account,
+# then checks the age range, the under-16 parent note and the required privacy checkbox.
+# Keyboard: press Enter to close it (hideKeyboard presses Back, which would close the app).
+# The "new notice version asks again" rule is covered by pgTAP (80_consent) and component
+# tests, because it needs the server config changed mid-test.
+appId: lk.fizzix.app
+name: ST-58 Agree to privacy and confirm age
+tags:
+  - ST-58
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: language-screen
+    timeout: 60000
+- tapOn:
+    id: language-continue
+
+# Verify the number (ST-02).
+- extendedWaitUntil:
+    visible:
+      id: register-screen
+    timeout: 20000
+- tapOn:
+    id: register-phone
+- inputText: '0770000004'
+- tapOn: 'புதிய கணக்கு'
+- tapOn:
+    id: register-send-otp
+- extendedWaitUntil:
+    visible:
+      id: register-verify
+    timeout: 20000
+- inputText: '123456'
+- tapOn: 'புதிய கணக்கு'
+- tapOn:
+    id: register-verify
+- extendedWaitUntil:
+    visible:
+      id: account-screen
+    timeout: 20000
+
+# Account details (ST-04).
+- tapOn:
+    id: account-name
+- inputText: 'Nila Perera'
+- pressKey: Enter
+- tapOn:
+    id: account-username
+- inputText: 'nila_e2e'
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: account-password
+- tapOn:
+    id: account-password
+- inputText: 'physics26'
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: account-confirm
+- tapOn:
+    id: account-confirm
+- inputText: 'physics26'
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: account-year-2028
+- tapOn:
+    id: account-year-2028
+- tapOn:
+    id: account-stream-maths
+
+# AC2: under 16 explains the parent confirmation.
+- scrollUntilVisible:
+    element:
+      id: account-age-under_16
+- tapOn:
+    id: account-age-under_16
+- assertVisible:
+    id: account-age-parent-note
+
+# AC1: summary and link are shown, and the checkbox is required.
+- scrollUntilVisible:
+    element:
+      id: account-privacy-link
+- assertVisible: '.*விற்பதில்லை.*'
+- scrollUntilVisible:
+    element:
+      id: account-submit
+- tapOn:
+    id: account-submit
+- scrollUntilVisible:
+    element:
+      id: account-privacy-error
+    direction: UP
+- assertVisible: '.*டிக் செய்யுங்கள்.*'
+- tapOn:
+    id: account-privacy-accept
+- assertNotVisible:
+    id: account-privacy-error
+
+# AC3: consent is saved with the account; home opens and stays signed in after a restart
+# (start-up asks the server whether the current notice is accepted).
+- scrollUntilVisible:
+    element:
+      id: account-submit
+- tapOn:
+    id: account-submit
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 20000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 30000

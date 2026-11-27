@@ -1,8 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabase } from './supabase';
+import { fetchConsentStatus } from '@/features/consent/consent';
 
-/** Where a student is in sign-up: no session, verified number only, or a finished account. */
-export type AuthState = 'signed_out' | 'needs_account' | 'complete';
+/**
+ * Where a student is: no session, verified number only, a finished account that must accept
+ * a new privacy notice (ST-58), or a finished account.
+ */
+export type AuthState = 'signed_out' | 'needs_account' | 'needs_consent' | 'complete';
 
 /** Remembered on the device so a finished account opens home even when offline. */
 export const ACCOUNT_COMPLETE_KEY = 'fizzix.account_complete';
@@ -24,9 +28,14 @@ export async function getAuthState(): Promise<AuthState> {
 
     const complete = Boolean(profile?.account_completed_at);
     await AsyncStorage.setItem(ACCOUNT_COMPLETE_KEY, complete ? '1' : '0');
-    return complete ? 'complete' : 'needs_account';
+    if (!complete) return 'needs_account';
+
+    // A new notice version is asked for on the next open (ST-58 AC3).
+    const consent = await fetchConsentStatus();
+    return consent.accepted ? 'complete' : 'needs_consent';
   } catch {
-    // Offline or server error: fall back to what this device last knew.
+    // Offline or server error: fall back to what this device last knew. A pending notice is
+    // asked for at the next open that reaches the server.
     const cached = await AsyncStorage.getItem(ACCOUNT_COMPLETE_KEY).catch(() => null);
     const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
     if (!data.session) return 'signed_out';

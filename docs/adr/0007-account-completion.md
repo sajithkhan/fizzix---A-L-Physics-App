@@ -15,7 +15,8 @@ password to log in with.
 
 ## Decision
 
-- Three idempotent steps: `save_account_details()` → `auth.updateUser({ password })` →
+- Three idempotent steps (ST-58 adds a consent step after the details, see ADR-0008):
+  `save_account_details()` → `auth.updateUser({ password })` →
   `complete_account()`.
 - `complete_account()` sets `profiles.account_completed_at` only when the details exist
   **and** `auth.users` has a password. Students cannot set this column directly.

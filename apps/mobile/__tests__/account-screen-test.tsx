@@ -9,84 +9,16 @@
  * AC3 Username must be unique. It is the nickname shown in challenges; login uses the phone.
  * AC4 When I tap "பதிவு செய்", my account is created and I land on home, already signed in.
  *
- * Server rules are tested in supabase/tests/70_account.test.sql.
+ * Server rules are tested in supabase/tests/70_account.test.sql. Privacy and age (ST-58) are
+ * covered in consent-screen-test.tsx.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
-import { getSupabase } from '@/lib/supabase';
+import { fakeBackend } from '../test-utils/fake-backend';
 import { analytics } from '@/lib/analytics';
 import { LOCALE_STORAGE_KEY } from '@/lib/locale-store';
 import ta from '@/i18n/ta.json';
 import si from '@/i18n/si.json';
-
-const mockedGetSupabase = getSupabase as jest.MockedFunction<typeof getSupabase>;
-
-type Err = { message: string; code?: string; status?: number } | null;
-
-function fakeBackend(opts: {
-  completed?: boolean;
-  takenUsernames?: string[];
-  saveError?: Err;
-  passwordError?: Err;
-  completeError?: Err;
-  examYears?: number[];
-}) {
-  const calls = { rpc: [] as Array<[string, unknown]>, updateUser: [] as unknown[] };
-  let completed = opts.completed ?? false;
-  const query = (table: string) => {
-    const chain = {
-      select: () => chain,
-      order: () => Promise.resolve({ data: [], error: null }),
-      eq: () => chain,
-      maybeSingle: () => {
-        if (table === 'profiles') {
-          return Promise.resolve({
-            data: { account_completed_at: completed ? '2026-11-27T10:00:00Z' : null },
-            error: null,
-          });
-        }
-        if (table === 'app_config') {
-          return Promise.resolve({
-            data: { value: opts.examYears ?? [2026, 2027, 2028] },
-            error: null,
-          });
-        }
-        return Promise.resolve({ data: null, error: null });
-      },
-    };
-    return chain;
-  };
-  const client = {
-    from: query,
-    rpc: (name: string, args?: Record<string, unknown>) => {
-      calls.rpc.push([name, args]);
-      if (name === 'username_available') {
-        const taken = (opts.takenUsernames ?? []).map((u) => u.toLowerCase());
-        return Promise.resolve({
-          data: !taken.includes(String(args?.p_username).toLowerCase()),
-          error: null,
-        });
-      }
-      if (name === 'save_account_details')
-        return Promise.resolve({ data: null, error: opts.saveError ?? null });
-      if (name === 'complete_account') {
-        if (!opts.completeError) completed = true;
-        return Promise.resolve({ data: null, error: opts.completeError ?? null });
-      }
-      return Promise.resolve({ data: null, error: null });
-    },
-    auth: {
-      getSession: () =>
-        Promise.resolve({ data: { session: { user: { id: 'u1', phone: '94770000003' } } } }),
-      updateUser: (args: unknown) => {
-        calls.updateUser.push(args);
-        return Promise.resolve({ data: {}, error: opts.passwordError ?? null });
-      },
-    },
-  };
-  mockedGetSupabase.mockReturnValue(client as unknown as ReturnType<typeof getSupabase>);
-  return calls;
-}
 
 async function open(lng: 'ta' | 'si' = 'ta') {
   await AsyncStorage.setItem(LOCALE_STORAGE_KEY, lng);
@@ -112,7 +44,9 @@ async function fillValid(
   await fireEvent.changeText(screen.getByTestId('account-confirm'), v.confirm);
   await fireEvent.press(screen.getByTestId('account-year-2027'));
   await fireEvent.press(screen.getByTestId('account-stream-bio'));
+  await fireEvent.press(screen.getByTestId('account-age-16_plus'));
   if (v.school) await fireEvent.changeText(screen.getByTestId('account-school'), v.school);
+  await fireEvent.press(screen.getByTestId('account-privacy-accept'));
 }
 
 beforeEach(async () => {
@@ -162,7 +96,7 @@ describe('ST-04 AC2: password rules', () => {
     ['physicsss', ta.account.errors.needs_digit],
     ['12345678', ta.account.errors.needs_letter],
   ])('"%s" is refused with a clear message', async (pw, message) => {
-    const calls = fakeBackend({});
+    const { calls } = fakeBackend({});
     await open();
     await fillValid({ password: pw, confirm: pw });
     await fireEvent.press(screen.getByTestId('account-submit'));
@@ -229,7 +163,7 @@ describe('ST-04 AC3: unique username', () => {
   });
 
   it('a username in the wrong format is refused before calling the server', async () => {
-    const calls = fakeBackend({});
+    const { calls } = fakeBackend({});
     await open();
     await fillValid({ username: 'ar' });
     await fireEvent.press(screen.getByTestId('account-submit'));
@@ -242,7 +176,7 @@ describe('ST-04 AC3: unique username', () => {
 
 describe('ST-04 AC4: create the account', () => {
   it('saves details, sets the password, completes the account and opens home', async () => {
-    const calls = fakeBackend({});
+    const { calls } = fakeBackend({});
     const router = await open();
     await fillValid({ school: 'Jaffna Hindu College' });
     await fireEvent.press(screen.getByTestId('account-submit'));
@@ -259,6 +193,7 @@ describe('ST-04 AC4: create the account', () => {
           p_school: 'Jaffna Hindu College',
         },
       ],
+      ['record_consent', { p_notice_version: '2026-11', p_age_band: '16_plus' }],
       ['complete_account', undefined],
     ]);
     expect(calls.updateUser).toEqual([{ password: 'physics26' }]);
@@ -271,9 +206,11 @@ describe('ST-04 AC4: create the account', () => {
     await fillValid();
     await fireEvent.press(screen.getByTestId('account-submit'));
     await waitFor(() => expect(router.getPathname()).toBe('/home'));
-    expect(analytics.events()).toEqual([
-      { name: 'account_created', props: { exam_year: 2027, stream: 'bio' } },
-    ]);
+    expect(analytics.events()).toContainEqual({
+      name: 'account_created',
+      props: { exam_year: 2027, stream: 'bio' },
+    });
+    expect(JSON.stringify(analytics.events())).not.toMatch(/Arjun|arjun_27|physics26/);
   });
 
   it('a weak password refused by the server is shown on the password field', async () => {

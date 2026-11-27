@@ -81,6 +81,17 @@ tags:
     id: account-year-2027
 - tapOn:
     id: account-stream-bio
+# ST-58: age range and privacy consent (its own flow covers the details).
+- scrollUntilVisible:
+    element:
+      id: account-age-16_plus
+- tapOn:
+    id: account-age-16_plus
+- scrollUntilVisible:
+    element:
+      id: account-privacy-accept
+- tapOn:
+    id: account-privacy-accept
 
 # AC2: mismatched passwords are caught before anything is saved.
 - scrollUntilVisible:

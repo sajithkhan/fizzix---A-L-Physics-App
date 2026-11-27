@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { AgeBand } from '@fizzix/shared';
 import { getSupabase } from '@/lib/supabase';
 import { ACCOUNT_COMPLETE_KEY } from '@/lib/session';
+import { recordConsent, type ConsentError } from '@/features/consent/consent';
 
 export type Stream = 'bio' | 'maths';
 
@@ -11,6 +13,9 @@ export interface AccountInput {
   examYear: number;
   stream: Stream;
   school: string;
+  /** ST-58: the age range and the notice version shown on screen. */
+  ageBand: AgeBand;
+  noticeVersion: string;
 }
 
 /** Errors the account screen turns into translated text. */
@@ -96,12 +101,12 @@ export async function isUsernameAvailable(username: string): Promise<boolean> {
 }
 
 /**
- * ST-04: save details → set password → mark complete. Each step is safe to repeat, so a
- * student who loses connection halfway simply presses the button again.
+ * ST-04 + ST-58: save details → record consent → set password → mark complete. Each step is
+ * safe to repeat, so a student who loses connection halfway simply presses the button again.
  */
 export async function createAccount(
   input: AccountInput,
-): Promise<{ ok: true } | { ok: false; error: AccountError }> {
+): Promise<{ ok: true } | { ok: false; error: AccountError | ConsentError }> {
   const supabase = getSupabase();
   if (!supabase) return { ok: false, error: 'network' };
   try {
@@ -113,6 +118,9 @@ export async function createAccount(
       p_school: input.school,
     });
     if (saved.error) return { ok: false, error: toAccountError(saved.error) };
+
+    const consent = await recordConsent(input.noticeVersion, input.ageBand);
+    if (!consent.ok) return consent;
 
     const password = await supabase.auth.updateUser({ password: input.password });
     if (password.error) return { ok: false, error: toAccountError(password.error) };

@@ -1,0 +1,124 @@
+/**
+ * An in-memory stand-in for the Supabase client, for component tests of the sign-up screens.
+ * It records every RPC and password call so tests can assert exactly what reached the server.
+ */
+import { getSupabase } from '@/lib/supabase';
+
+const mockedGetSupabase = getSupabase as jest.MockedFunction<typeof getSupabase>;
+
+export type FakeError = { message: string; code?: string; status?: number } | null;
+
+export const NOTICE = { version: '2026-11', url: 'https://example.lk/privacy' };
+
+export interface FakeBackendOptions {
+  completed?: boolean;
+  takenUsernames?: string[];
+  saveError?: FakeError;
+  consentError?: FakeError;
+  passwordError?: FakeError;
+  completeError?: FakeError;
+  examYears?: number[];
+  notice?: { version: string; url: string } | null;
+  /** Notice versions this student has accepted. */
+  accepted?: string[];
+  ageBand?: '16_plus' | 'under_16' | null;
+}
+
+export function fakeBackend(opts: FakeBackendOptions = {}) {
+  const calls = { rpc: [] as Array<[string, unknown]>, updateUser: [] as unknown[] };
+  let completed = opts.completed ?? false;
+  let notice = opts.notice === undefined ? NOTICE : opts.notice;
+  const accepted = new Set(opts.accepted ?? (completed && notice ? [notice.version] : []));
+  let ageBand = opts.ageBand ?? null;
+
+  const query = (table: string) => {
+    let key: unknown = null;
+    const chain = {
+      select: () => chain,
+      order: () => Promise.resolve({ data: [], error: null }),
+      eq: (_col: string, value: unknown) => {
+        key = value;
+        return chain;
+      },
+      maybeSingle: () => {
+        if (table === 'profiles') {
+          return Promise.resolve({
+            data: {
+              account_completed_at: completed ? '2026-11-27T10:00:00Z' : null,
+              age_band: ageBand,
+            },
+            error: null,
+          });
+        }
+        if (table === 'app_config' && key === 'exam_years') {
+          return Promise.resolve({
+            data: { value: opts.examYears ?? [2026, 2027, 2028] },
+            error: null,
+          });
+        }
+        if (table === 'app_config' && key === 'privacy_notice') {
+          return Promise.resolve({ data: notice ? { value: notice } : null, error: null });
+        }
+        return Promise.resolve({ data: null, error: null });
+      },
+    };
+    return chain;
+  };
+
+  const client = {
+    from: query,
+    rpc: (name: string, args?: Record<string, unknown>) => {
+      calls.rpc.push([name, args]);
+      if (name === 'username_available') {
+        const taken = (opts.takenUsernames ?? []).map((u) => u.toLowerCase());
+        return Promise.resolve({
+          data: !taken.includes(String(args?.p_username).toLowerCase()),
+          error: null,
+        });
+      }
+      if (name === 'save_account_details')
+        return Promise.resolve({ data: null, error: opts.saveError ?? null });
+      if (name === 'record_consent') {
+        if (opts.consentError) return Promise.resolve({ data: null, error: opts.consentError });
+        accepted.add(String(args?.p_notice_version));
+        ageBand = args?.p_age_band as typeof ageBand;
+        return Promise.resolve({ data: null, error: null });
+      }
+      if (name === 'consent_status') {
+        const ok = notice ? accepted.has(notice.version) : false;
+        return Promise.resolve({
+          data: [
+            {
+              current_version: notice?.version ?? '',
+              accepted: ok,
+              age_band: ok ? ageBand : null,
+              parent_confirmation_pending: ok && ageBand === 'under_16',
+            },
+          ],
+          error: null,
+        });
+      }
+      if (name === 'complete_account') {
+        if (!opts.completeError) completed = true;
+        return Promise.resolve({ data: null, error: opts.completeError ?? null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    },
+    auth: {
+      getSession: () =>
+        Promise.resolve({ data: { session: { user: { id: 'u1', phone: '94770000003' } } } }),
+      updateUser: (args: unknown) => {
+        calls.updateUser.push(args);
+        return Promise.resolve({ data: {}, error: opts.passwordError ?? null });
+      },
+    },
+  };
+  mockedGetSupabase.mockReturnValue(client as unknown as ReturnType<typeof getSupabase>);
+  return {
+    calls,
+    /** Simulates the admin publishing a new notice version. */
+    publishNotice(version: string) {
+      notice = { version, url: notice?.url ?? NOTICE.url };
+    },
+  };
+}

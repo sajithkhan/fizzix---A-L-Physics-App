@@ -24,6 +24,7 @@ const config: ExpoConfig = {
   ios: { bundleIdentifier: brand.iosBundleId, supportsTablet: false },
   plugins: [
     'expo-router',
+    'expo-secure-store',
     [
       'expo-splash-screen',
       { image: './assets/splash-icon.png', imageWidth: 96, backgroundColor: brand.colors.primary },

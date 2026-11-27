@@ -56,3 +56,22 @@ export async function sessionPhone(): Promise<string | null> {
     return null;
   }
 }
+
+/**
+ * ST-05 · log out on this phone: Supabase ends this session (other phones stay signed in)
+ * and the tokens are removed from secure storage. Next time the student logs in with number
+ * and password (ST-54), no OTP.
+ */
+export async function signOut(): Promise<{ ok: true } | { ok: false; error: 'network' }> {
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) return { ok: false, error: 'network' };
+    } catch {
+      return { ok: false, error: 'network' };
+    }
+  }
+  await AsyncStorage.removeItem(ACCOUNT_COMPLETE_KEY).catch(() => undefined);
+  return { ok: true };
+}

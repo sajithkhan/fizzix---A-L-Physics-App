@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { secureSessionStorage } from './secure-storage';
 
 /**
  * The only Supabase client in the app. Uses the public URL and anon key only; every
@@ -8,8 +8,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
  * Returns null when the app is built without Supabase settings (tests, a fresh checkout),
  * so screens fall back to built-in data instead of crashing.
  *
- * Session storage: AsyncStorage for now. ST-05 (stay signed in) moves tokens to
- * expo-secure-store before any real sign-in ships.
+ * Session storage: the phone's secure storage (ST-05, src/lib/secure-storage.ts), so the
+ * student stays signed in across app restarts and the tokens never sit in plain storage.
  */
 let client: SupabaseClient | null | undefined;
 
@@ -21,7 +21,7 @@ export function getSupabase(): SupabaseClient | null {
     url && anonKey
       ? createClient(url, anonKey, {
           auth: {
-            storage: AsyncStorage,
+            storage: secureSessionStorage,
             autoRefreshToken: true,
             persistSession: true,
             detectSessionInUrl: false,

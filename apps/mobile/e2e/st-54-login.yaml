@@ -1,6 +1,6 @@
 # ST-54 · Log in with number and password — end to end against a local Supabase and the
 # login Edge Function. Creates an account for test number 0770000005 (OTP 123456, see
-# supabase/config.toml), clears the app, then logs in: wrong password, right password, and
+# supabase/config.toml), logs out, then logs in: wrong password, right password, and
 # the 5-wrong-tries lock. Keyboard: Enter closes it; on the password field Enter also
 # submits, like a student pressing "go" (hideKeyboard presses Back, which would close the app).
 appId: lk.fizzix.app
@@ -91,18 +91,15 @@ tags:
       id: home-screen
     timeout: 20000
 
-# A new phone: no session on the device. Sign-up links to login (AC4 in reverse).
-# Wipe the app the reliable way: stop it, clear its data, then start it. Starting right
-# after a wipe can take over a minute on the CI emulator, hence the longer wait.
-- stopApp
-- clearState
-- launchApp
+# Log out (ST-05): the app now opens on login. AC4: login and sign-up link to each other.
+- tapOn:
+    id: home-logout
 - extendedWaitUntil:
     visible:
-      id: language-screen
-    timeout: 120000
+      id: login-screen
+    timeout: 20000
 - tapOn:
-    id: language-continue
+    id: login-register-link
 - extendedWaitUntil:
     visible:
       id: register-screen
@@ -156,26 +153,8 @@ tags:
     timeout: 30000
 
 # AC3: five wrong tries lock the number; even the right password is refused for 15 minutes.
-# Wipe the app the reliable way: stop it, clear its data, then start it. Starting right
-# after a wipe can take over a minute on the CI emulator, hence the longer wait.
-- stopApp
-- clearState
-- launchApp
-- extendedWaitUntil:
-    visible:
-      id: language-screen
-    timeout: 120000
 - tapOn:
-    id: language-continue
-- extendedWaitUntil:
-    visible:
-      id: register-screen
-    timeout: 20000
-- scrollUntilVisible:
-    element:
-      id: register-login-link
-- tapOn:
-    id: register-login-link
+    id: home-logout
 - extendedWaitUntil:
     visible:
       id: login-screen

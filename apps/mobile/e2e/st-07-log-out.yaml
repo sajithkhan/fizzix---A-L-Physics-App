@@ -1,0 +1,64 @@
+# ST-07 · Log out — end to end against a local Supabase. Creates an account for test number
+# 0770000007 (OTP 123456, see supabase/config.toml), opens Settings, cancels once, then logs
+# out and checks the app stays logged out after a restart.
+appId: lk.fizzix.app
+name: ST-07 Log out
+tags:
+  - ST-07
+---
+- runFlow:
+    file: subflows/sign-up.yaml
+    env:
+      PHONE: '0770000007'
+      NAME: 'Nimal Fernando'
+      USERNAME: 'nimal_e2e'
+
+# Settings shows who is signed in, and the logout row with its reminder.
+- tapOn:
+    id: home-settings
+- extendedWaitUntil:
+    visible:
+      id: settings-screen
+    timeout: 20000
+- assertVisible: 'Nimal Fernando'
+- assertVisible: '\+94 77 000 0007'
+- assertVisible: '.*நம்பர் \+ password மூலம் மீண்டும் உள்நுழையலாம்.*'
+
+# AC1: tapping logout asks first, with the reminder. "இல்லை" keeps me signed in.
+- tapOn:
+    id: settings-logout
+- extendedWaitUntil:
+    visible:
+      id: logout-confirm
+    timeout: 10000
+- assertVisible: 'வெளியேற வேண்டுமா?'
+- assertVisible: '.*எப்போது வேண்டுமானாலும் மீண்டும் உள்நுழையலாம்.*'
+- tapOn:
+    id: logout-confirm-cancel
+- assertNotVisible:
+    id: logout-confirm
+- assertVisible:
+    id: settings-screen
+
+# AC2: on confirm the session ends and the login screen opens.
+- tapOn:
+    id: settings-logout
+- tapOn:
+    id: logout-confirm-ok
+- extendedWaitUntil:
+    visible:
+      id: login-screen
+    timeout: 20000
+
+# Back does not return to the signed-in screens, and a restart stays on login.
+- back
+- assertNotVisible:
+    id: settings-screen
+- assertNotVisible:
+    id: home-screen
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: login-screen
+    timeout: 30000

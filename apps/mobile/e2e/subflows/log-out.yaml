@@ -1,0 +1,17 @@
+# Shared step, not a test on its own: home → Settings → log out → confirm → login (ST-07).
+appId: lk.fizzix.app
+---
+- tapOn:
+    id: home-settings
+- extendedWaitUntil:
+    visible:
+      id: settings-screen
+    timeout: 20000
+- tapOn:
+    id: settings-logout
+- tapOn:
+    id: logout-confirm-ok
+- extendedWaitUntil:
+    visible:
+      id: login-screen
+    timeout: 20000

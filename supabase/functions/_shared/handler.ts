@@ -14,6 +14,8 @@ export const MAX_BODY_BYTES = 64 * 1024;
 
 export interface AuthUser {
   id: string;
+  /** Verified phone, E.164 (+947…), when the account has one. */
+  phone?: string;
 }
 
 export interface Deps {
@@ -156,6 +158,80 @@ export function createHandler<In extends z.ZodTypeAny, Out extends z.ZodTypeAny>
         status: 200,
         ms: now() - started,
       });
+      return json(200, out.data, requestId);
+    } catch (err) {
+      const code: ErrorCode =
+        err instanceof AppError
+          ? err.code
+          : isErrorCode((err as { message?: unknown })?.message)
+            ? ((err as Error).message as ErrorCode)
+            : 'internal';
+      return fail(code);
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Public functions (no signed-in user yet, e.g. login)
+// ---------------------------------------------------------------------------------------------
+
+export interface PublicContext {
+  requestId: string;
+  /** First address in x-forwarded-for (set by the Supabase gateway), or 'unknown'. */
+  clientIp: string;
+}
+
+/**
+ * Same pipeline without the token and entitlement steps:
+ *
+ *   method check → body size → validate input (zod) → work → validate output → respond
+ *
+ * There is no user to rate-limit by, so `work` MUST apply its own limits keyed by what it
+ * protects (for login: the client IP and the phone number) before doing anything else.
+ */
+export interface PublicFunctionSpec<In extends z.ZodTypeAny, Out extends z.ZodTypeAny> {
+  name: string;
+  input: In;
+  output: Out;
+  work(ctx: PublicContext, input: z.output<In>): Promise<z.input<Out>>;
+}
+
+export type PublicDeps = Pick<Deps, 'log' | 'now' | 'requestId'>;
+
+function clientIp(req: Request): string {
+  const forwarded = req.headers.get('x-forwarded-for') ?? '';
+  const first = forwarded.split(',')[0]?.trim() ?? '';
+  return first.length > 0 && first.length <= 64 ? first : 'unknown';
+}
+
+export function createPublicHandler<In extends z.ZodTypeAny, Out extends z.ZodTypeAny>(
+  spec: PublicFunctionSpec<In, Out>,
+  deps: PublicDeps,
+): (req: Request) => Promise<Response> {
+  const now = deps.now ?? (() => Date.now());
+  const newId = deps.requestId ?? (() => crypto.randomUUID());
+
+  return async (req) => {
+    const started = now();
+    const requestId = newId();
+    const fail = (code: ErrorCode): Response => {
+      const status = ERROR_STATUS[code];
+      deps.log({ fn: spec.name, request_id: requestId, status, code, ms: now() - started });
+      return json(status, { error: { code } }, requestId);
+    };
+
+    try {
+      if (req.method !== 'POST') return fail('invalid_input');
+      const body = await readJson(req);
+      if (body === TOO_LARGE || body === BAD_JSON) return fail('invalid_input');
+      const parsed = spec.input.safeParse(body);
+      if (!parsed.success) return fail('invalid_input');
+
+      const result = await spec.work({ requestId, clientIp: clientIp(req) }, parsed.data);
+      const out = spec.output.safeParse(result);
+      if (!out.success) return fail('internal');
+
+      deps.log({ fn: spec.name, request_id: requestId, status: 200, ms: now() - started });
       return json(200, out.data, requestId);
     } catch (err) {
       const code: ErrorCode =

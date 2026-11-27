@@ -5,13 +5,16 @@ tags:
   - ST-01
 ---
 # AC1: first launch shows the language screen, Tamil selected, English disabled.
-- launchApp:
-    clearState: true
+# Wipe the app the reliable way: stop it, clear its data, then start it. Starting right
+# after a wipe can take over a minute on the CI emulator, hence the longer wait.
+- stopApp
+- clearState
+- launchApp
 # The emulator may still be settling right after boot: allow a slow first start.
 - extendedWaitUntil:
     visible:
       id: language-screen
-    timeout: 60000
+    timeout: 120000
 - assertVisible:
     id: language-option-ta
     selected: true
@@ -50,13 +53,14 @@ tags:
     timeout: 20000
 - assertVisible: 'නව ගිණුම'
 
-# The choice survives an app restart: no language screen the second time.
+# The choice survives an app restart: no language screen the second time. Signed out, the
+# app now opens on login (ST-54), still in Sinhala.
 - stopApp
 - launchApp
 - extendedWaitUntil:
     visible:
-      id: register-screen
+      id: login-screen
     timeout: 30000
 - assertNotVisible:
     id: language-screen
-- assertVisible: 'නව ගිණුම'
+- assertVisible: 'නව සිසුවෙක්ද?'

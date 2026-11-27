@@ -52,7 +52,7 @@ function fakeAuth(opts: { sendError?: AuthError; verifyError?: AuthError; sessio
 
 async function openRegister(lng: 'ta' | 'si' = 'ta') {
   await AsyncStorage.setItem(LOCALE_STORAGE_KEY, lng);
-  const router = await renderRouter('src/app', { initialUrl: '/' });
+  const router = await renderRouter('src/app', { initialUrl: '/register' });
   await screen.findByTestId('register-screen');
   return router;
 }
@@ -73,7 +73,7 @@ beforeEach(async () => {
 });
 
 describe('ST-02 entry', () => {
-  it('a new student who picked a language lands on registration (step 1 of 2)', async () => {
+  it('shows registration (step 1 of 2)', async () => {
     fakeAuth({});
     const router = await openRegister();
     expect(router.getPathname()).toBe('/register');

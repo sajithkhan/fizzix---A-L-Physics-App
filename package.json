@@ -12,6 +12,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "db:test": "bash supabase/scripts/test-local.sh",
+    "sync:shared": "bash scripts/sync-shared-to-functions.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

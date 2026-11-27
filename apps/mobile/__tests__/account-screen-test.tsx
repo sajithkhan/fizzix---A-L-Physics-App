@@ -196,7 +196,7 @@ describe('ST-04 AC4: create the account', () => {
       ['record_consent', { p_notice_version: '2026-11', p_age_band: '16_plus' }],
       ['complete_account', undefined],
     ]);
-    expect(calls.updateUser).toEqual([{ password: 'physics26' }]);
+    expect(calls.functions).toEqual([['set-password', { password: 'physics26' }]]);
     expect(screen.getByText(ta.home.title)).toBeOnTheScreen();
   });
 
@@ -214,13 +214,7 @@ describe('ST-04 AC4: create the account', () => {
   });
 
   it('a weak password refused by the server is shown on the password field', async () => {
-    fakeBackend({
-      passwordError: {
-        message: 'Password is known to be weak',
-        code: 'weak_password',
-        status: 422,
-      },
-    });
+    fakeBackend({ passwordErrorCode: 'weak_password' });
     await open();
     await fillValid();
     await fireEvent.press(screen.getByTestId('account-submit'));

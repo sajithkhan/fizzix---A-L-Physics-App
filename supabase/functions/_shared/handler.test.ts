@@ -132,3 +132,56 @@ Deno.test('logs carry ids and codes but never the token or body', async () => {
   assertEquals(d.logs[1]?.code, 'invalid_input');
   assertEquals(d.logs[1]?.user_id, USER.id);
 });
+
+// Public functions -------------------------------------------------------------------------------
+import { createPublicHandler } from './handler.ts';
+
+const publicSpec = {
+  name: 'public-echo',
+  input: z.object({ n: z.number().int() }).strict(),
+  output: z.object({ doubled: z.number(), ip: z.string() }).strict(),
+  work: (ctx: { clientIp: string }, input: { n: number }) =>
+    Promise.resolve({ doubled: input.n * 2, ip: ctx.clientIp }),
+};
+
+async function callPublic(req: Request, s: Record<string, unknown> = publicSpec) {
+  const logs: LogEntry[] = [];
+  // deno-lint-ignore no-explicit-any
+  const res = await createPublicHandler(s as any, {
+    log: (e) => logs.push(e),
+    requestId: () => 'r',
+  })(req);
+  return { status: res.status, body: await res.json(), logs };
+}
+
+Deno.test('public functions need no token and see the client IP', async () => {
+  const r = await callPublic(
+    new Request('http://localhost/x', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '203.0.113.7, 10.0.0.1' },
+      body: JSON.stringify({ n: 2 }),
+    }),
+  );
+  assertEquals(r.status, 200);
+  assertEquals(r.body, { doubled: 4, ip: '203.0.113.7' });
+});
+
+Deno.test('public functions still validate input and output strictly', async () => {
+  assertEquals((await callPublic(post({ n: 1, extra: true }, null))).status, 400);
+  assertEquals((await callPublic(post('{bad', null))).status, 400);
+  const leaky = { ...publicSpec, work: () => Promise.resolve({ doubled: 1, ip: 'x', token: 't' }) };
+  assertEquals((await callPublic(post({ n: 1 }, null), leaky)).body, {
+    error: { code: 'internal' },
+  });
+});
+
+Deno.test('public functions map AppError codes and never leak details', async () => {
+  const locked = { ...publicSpec, work: () => Promise.reject(new AppError('login_locked')) };
+  const r = await callPublic(post({ n: 1 }, null), locked);
+  assertEquals(r.status, 429);
+  assertEquals(r.body, { error: { code: 'login_locked' } });
+  const boom = { ...publicSpec, work: () => Promise.reject(new Error('secret detail')) };
+  const b = await callPublic(post({ n: 1 }, null), boom);
+  assertEquals(JSON.stringify(b.body), '{"error":{"code":"internal"}}');
+  assert(!JSON.stringify(b.logs).includes('secret'));
+});

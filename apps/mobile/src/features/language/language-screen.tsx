@@ -45,7 +45,8 @@ export function LanguageScreen() {
       await saveLocale(active);
       analytics.track('language_selected', { locale: active, first_launch: saved === null });
       setSaved(active);
-      router.replace('/');
+      // First launch: most students are new, so sign-up (ST-02); it links to login (ST-54).
+      router.replace(saved === null ? '/register' : '/');
     } finally {
       setSaving(false);
     }

@@ -155,8 +155,9 @@ describe('ST-01 returning student', () => {
     await AsyncStorage.setItem(LOCALE_STORAGE_KEY, 'si');
     const router = await renderRouter('src/app', { initialUrl: '/' });
 
-    await waitFor(() => expect(router.getPathname()).toBe('/register'));
-    expect(await screen.findByText(si.register.title)).toBeOnTheScreen();
+    // Signed out on a later open: the login screen (ST-54), which links to sign-up.
+    await waitFor(() => expect(router.getPathname()).toBe('/login'));
+    expect(await screen.findByText(si.login.newStudent)).toBeOnTheScreen();
   });
 
   it('ignores a corrupted saved value and asks again', async () => {

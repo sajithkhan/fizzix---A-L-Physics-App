@@ -8,6 +8,7 @@ import { BrandHeader } from '@/components/brand-header';
 import { PrimaryButton } from '@/components/primary-button';
 import { TextButton } from '@/components/text-button';
 import { ErrorMessage } from '@/components/error-message';
+import { PhoneField } from '@/components/phone-field';
 import { analytics } from '@/lib/analytics';
 import { radius, space, useTheme, type Palette } from '@/theme';
 import { RESEND_SECONDS, requestOtp, verifyOtp, type OtpError } from './otp';
@@ -91,47 +92,18 @@ export function RegisterScreen() {
 
         {phone === null ? (
           <>
-            <View style={styles.field}>
-              <Text nativeID="phone-label" style={[styles.label, { color: colors.fieldLabel }]}>
-                {t('register.phoneLabel')}
-              </Text>
-              <View style={styles.phoneRow}>
-                <View
-                  style={[
-                    styles.prefix,
-                    { borderColor: colors.inputBorder, backgroundColor: colors.prefixBg },
-                  ]}
-                >
-                  <Text style={[styles.prefixText, { color: colors.text }]}>+94</Text>
-                </View>
-                <TextInput
-                  testID="register-phone"
-                  accessibilityLabelledBy="phone-label"
-                  accessibilityLabel={t('register.phoneLabel')}
-                  value={input}
-                  onChangeText={(value) => {
-                    setInput(value);
-                    if (error) setError(null);
-                  }}
-                  onSubmitEditing={() => void send(false)}
-                  placeholder={t('register.phonePlaceholder')}
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="phone-pad"
-                  textContentType="telephoneNumber"
-                  autoComplete="tel"
-                  maxLength={16}
-                  returnKeyType="send"
-                  style={[
-                    styles.input,
-                    {
-                      borderColor: colors.inputBorder,
-                      backgroundColor: colors.inputBg,
-                      color: colors.text,
-                    },
-                  ]}
-                />
-              </View>
-            </View>
+            <PhoneField
+              testID="register-phone"
+              label={t('register.phoneLabel')}
+              placeholder={t('register.phonePlaceholder')}
+              value={input}
+              onChangeText={(value) => {
+                setInput(value);
+                if (error) setError(null);
+              }}
+              onSubmitEditing={() => void send(false)}
+              returnKeyType="send"
+            />
             {error ? (
               <ErrorMessage testID="register-error" message={t(`register.errors.${error}`)} />
             ) : null}
@@ -193,6 +165,17 @@ export function RegisterScreen() {
           disabled={code.length !== OTP_LENGTH}
         />
       ) : null}
+
+      <View style={styles.switchRow}>
+        <Text style={[styles.switchText, { color: colors.textMuted }]}>
+          {t('register.haveAccount')}
+        </Text>
+        <TextButton
+          testID="register-login-link"
+          label={t('register.loginLink')}
+          onPress={() => router.replace('/login')}
+        />
+      </View>
     </Screen>
   );
 }
@@ -297,23 +280,6 @@ const styles = StyleSheet.create({
   step: { fontSize: 13, lineHeight: 20 },
   field: { gap: 8 },
   label: { fontSize: 14, fontWeight: '600' },
-  phoneRow: { flexDirection: 'row', gap: 8 },
-  prefix: {
-    height: 48,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    justifyContent: 'center',
-  },
-  prefixText: { fontSize: 16, fontWeight: '600' },
-  input: {
-    flex: 1,
-    height: 48,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    fontSize: 16,
-  },
   sentTo: { fontSize: 13 },
   otpRow: { flexDirection: 'row', gap: 8 },
   otpBox: {
@@ -326,4 +292,12 @@ const styles = StyleSheet.create({
   otpDigit: { fontSize: 18, fontWeight: '700' },
   otpActions: { flexDirection: 'row', justifyContent: 'space-between' },
   hiddenInput: { position: 'absolute', width: 1, height: 1, opacity: 0 },
+  switchRow: {
+    marginTop: 'auto',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  switchText: { fontSize: 14 },
 });

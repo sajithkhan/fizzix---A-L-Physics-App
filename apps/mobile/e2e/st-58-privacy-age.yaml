@@ -9,12 +9,15 @@ name: ST-58 Agree to privacy and confirm age
 tags:
   - ST-58
 ---
-- launchApp:
-    clearState: true
+# Wipe the app the reliable way: stop it, clear its data, then start it. Starting right
+# after a wipe can take over a minute on the CI emulator, hence the longer wait.
+- stopApp
+- clearState
+- launchApp
 - extendedWaitUntil:
     visible:
       id: language-screen
-    timeout: 60000
+    timeout: 120000
 - tapOn:
     id: language-continue
 

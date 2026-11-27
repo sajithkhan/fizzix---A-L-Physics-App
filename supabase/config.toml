@@ -275,6 +275,7 @@ max_frequency = "45s"
 94770000002 = "123456"
 94770000003 = "123456"
 94770000004 = "123456"
+94770000005 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
@@ -399,8 +400,10 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+# Local and CI only. Production: `supabase secrets set PASSWORD_PEPPER=...` (a long random
+# value kept in a password manager; changing it invalidates every password, see ADR-0009).
+[edge_runtime.secrets]
+PASSWORD_PEPPER = "env(PASSWORD_PEPPER)"
 
 [analytics]
 enabled = true
@@ -429,3 +432,12 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# ST-54 login: public, called before the student has a session. It applies its own IP and
+# per-number limits (ADR-0009).
+[functions.login]
+verify_jwt = false
+
+# ST-04 password step: needs the OTP session.
+[functions.set-password]
+verify_jwt = true

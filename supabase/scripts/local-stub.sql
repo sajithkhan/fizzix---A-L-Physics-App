@@ -16,6 +16,7 @@ create table if not exists auth.users (
   id uuid primary key default gen_random_uuid(),
   phone text unique,
   email text unique,
+  encrypted_password text,
   created_at timestamptz not null default now()
 );
 

@@ -78,7 +78,7 @@ select is(pg_temp.err(private.send_sms_hook(pg_temp.event('94774444444', '12ab56
 
 -- Already registered ------------------------------------------------------------------------------
 insert into auth.users (id, phone) values ('11111111-1111-1111-1111-111111111111', '94775555555');
-update public.profiles set username = 'arjun_27' where id = '11111111-1111-1111-1111-111111111111';
+update public.profiles set username = 'arjun_27', account_completed_at = now() where id = '11111111-1111-1111-1111-111111111111';
 
 select is(pg_temp.err(private.send_sms_hook(pg_temp.event('94775555555'))), 'already_registered',
   'a number that already has an account is sent to login instead');

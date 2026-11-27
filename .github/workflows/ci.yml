@@ -42,7 +42,7 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno lint
-      - run: deno check _shared/*.ts
+      - run: deno check */*.ts
       - run: deno test --permit-no-files
 
   database:
@@ -57,6 +57,8 @@ jobs:
       - name: Start local database
         env:
           SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN: local-placeholder
+          # Read by config.toml for the edge runtime, which this job does not start.
+          PASSWORD_PEPPER: ci-database-job-placeholder-not-a-real-secret
         # Same retry as the E2E job: a shared runner can briefly hold port 54322.
         run: |
           for attempt in 1 2 3; do

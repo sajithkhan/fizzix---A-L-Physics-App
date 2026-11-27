@@ -50,13 +50,14 @@ tags:
     timeout: 20000
 - assertVisible: 'නව ගිණුම'
 
-# The choice survives an app restart: no language screen the second time.
+# The choice survives an app restart: no language screen the second time. Signed out, the
+# app now opens on login (ST-54), still in Sinhala.
 - stopApp
 - launchApp
 - extendedWaitUntil:
     visible:
-      id: register-screen
+      id: login-screen
     timeout: 30000
 - assertNotVisible:
     id: language-screen
-- assertVisible: 'නව ගිණුම'
+- assertVisible: 'නව සිසුවෙක්ද?'

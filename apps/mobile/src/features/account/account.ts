@@ -3,6 +3,7 @@ import type { AgeBand } from '@fizzix/shared';
 import { getSupabase } from '@/lib/supabase';
 import { ACCOUNT_COMPLETE_KEY } from '@/lib/session';
 import { recordConsent, type ConsentError } from '@/features/consent/consent';
+import { callFunction } from '@/lib/functions';
 
 export type Stream = 'bio' | 'maths';
 
@@ -69,6 +70,13 @@ export function toAccountError(error: unknown): AccountError {
   return 'internal';
 }
 
+function passwordError(code: string): AccountError {
+  if (code === 'weak_password') return 'weak_password';
+  if (code === 'not_authenticated') return 'session_expired';
+  if (code === 'network') return 'network';
+  return 'internal';
+}
+
 /** Exam years offered on the screen (admin-configurable in app_config.exam_years). */
 export async function loadExamYears(): Promise<readonly number[]> {
   const supabase = getSupabase();
@@ -101,7 +109,8 @@ export async function isUsernameAvailable(username: string): Promise<boolean> {
 }
 
 /**
- * ST-04 + ST-58: save details → record consent → set password → mark complete. Each step is
+ * ST-04 + ST-58: save details → record consent → set password (set-password Edge Function)
+ * → mark complete. Each step is
  * safe to repeat, so a student who loses connection halfway simply presses the button again.
  */
 export async function createAccount(
@@ -122,8 +131,9 @@ export async function createAccount(
     const consent = await recordConsent(input.noticeVersion, input.ageBand);
     if (!consent.ok) return consent;
 
-    const password = await supabase.auth.updateUser({ password: input.password });
-    if (password.error) return { ok: false, error: toAccountError(password.error) };
+    // Through the server, which stores only a derived password in Supabase Auth (ADR-0009).
+    const password = await callFunction<{ ok: true }>('set-password', { password: input.password });
+    if (!password.ok) return { ok: false, error: passwordError(password.code) };
 
     const completed = await supabase.rpc('complete_account');
     if (completed.error) return { ok: false, error: toAccountError(completed.error) };

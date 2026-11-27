@@ -15,7 +15,12 @@ export interface FakeBackendOptions {
   takenUsernames?: string[];
   saveError?: FakeError;
   consentError?: FakeError;
-  passwordError?: FakeError;
+  /** Error code the set-password Edge Function answers with. */
+  passwordErrorCode?: string;
+  /** Error code the login Edge Function answers with ('network' = unreachable). */
+  loginErrorCode?: string;
+  /** Start without a session (signed out). */
+  signedOut?: boolean;
   completeError?: FakeError;
   examYears?: number[];
   notice?: { version: string; url: string } | null;
@@ -25,11 +30,16 @@ export interface FakeBackendOptions {
 }
 
 export function fakeBackend(opts: FakeBackendOptions = {}) {
-  const calls = { rpc: [] as Array<[string, unknown]>, updateUser: [] as unknown[] };
+  const calls = {
+    rpc: [] as Array<[string, unknown]>,
+    functions: [] as Array<[string, unknown]>,
+    setSession: [] as unknown[],
+  };
   let completed = opts.completed ?? false;
   let notice = opts.notice === undefined ? NOTICE : opts.notice;
   const accepted = new Set(opts.accepted ?? (completed && notice ? [notice.version] : []));
   let ageBand = opts.ageBand ?? null;
+  let signedIn = !opts.signedOut;
 
   const query = (table: string) => {
     let key: unknown = null;
@@ -106,10 +116,41 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
     },
     auth: {
       getSession: () =>
-        Promise.resolve({ data: { session: { user: { id: 'u1', phone: '94770000003' } } } }),
-      updateUser: (args: unknown) => {
-        calls.updateUser.push(args);
-        return Promise.resolve({ data: {}, error: opts.passwordError ?? null });
+        Promise.resolve({
+          data: { session: signedIn ? { user: { id: 'u1', phone: '94770000003' } } : null },
+        }),
+      setSession: (args: unknown) => {
+        calls.setSession.push(args);
+        signedIn = true;
+        return Promise.resolve({ data: {}, error: null });
+      },
+    },
+    functions: {
+      invoke: (name: string, options?: { body?: unknown }) => {
+        calls.functions.push([name, options?.body]);
+        const fail = (code: string, status = 400) =>
+          Promise.resolve({
+            data: null,
+            error: {
+              name: 'FunctionsHttpError',
+              context: { status, json: () => Promise.resolve({ error: { code } }) },
+            },
+          });
+        if (name === 'set-password') {
+          if (opts.passwordErrorCode) return fail(opts.passwordErrorCode);
+          return Promise.resolve({ data: { ok: true }, error: null });
+        }
+        if (name === 'login') {
+          if (opts.loginErrorCode === 'network') {
+            return Promise.resolve({ data: null, error: { name: 'FunctionsFetchError' } });
+          }
+          if (opts.loginErrorCode) return fail(opts.loginErrorCode, 401);
+          return Promise.resolve({
+            data: { access_token: 'at', refresh_token: 'rt', expires_in: 3600, expires_at: 1 },
+            error: null,
+          });
+        }
+        return fail('internal', 500);
       },
     },
   };

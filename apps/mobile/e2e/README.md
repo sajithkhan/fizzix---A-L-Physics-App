@@ -9,10 +9,13 @@ cd apps/mobile
 npx expo prebuild --platform android
 cd android && ./gradlew assembleRelease && cd ..
 adb install -r android/app/build/outputs/apk/release/app-release.apk
-bash e2e/run.sh        # every flow; prints the screen and app log for any failure
+bash e2e/run.sh        # all flows in one Maestro session; retries a failed flow once and
+                       # prints its screen and app log if it fails again
 ```
 
-The app must point at a local Supabase (`supabase start`) for flows that sign in. Build with
+The app must point at a local Supabase (`supabase start`, with the edge runtime for the
+`login` and `set-password` functions and `PASSWORD_PEPPER` set to any 32+ character value)
+for flows that sign in. Build with
 `EXPO_PUBLIC_SUPABASE_URL=http://10.0.2.2:54321`, the local anon key and
 `E2E_ALLOW_CLEARTEXT=1`, as the CI job does. Test numbers and their OTP (123456) come from
 `supabase/config.toml` and `supabase/seed.sql`.

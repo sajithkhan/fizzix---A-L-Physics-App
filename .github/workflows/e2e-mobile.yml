@@ -163,6 +163,48 @@ jobs:
             exit 1
           fi
 
+      # ST-55: finish the smoke account, then reset its password through both Edge Functions
+      # and log in with the new one. Prints the server logs if any step fails.
+      - name: Smoke-test password reset against the local Supabase
+        run: |
+          api=http://127.0.0.1:54321
+          key="$EXPO_PUBLIC_SUPABASE_ANON_KEY"
+          dump() {
+            echo "::group::edge runtime log"; docker logs supabase_edge_runtime_fizzix --tail 120 2>&1; echo "::endgroup::"
+            echo "::group::auth log"; docker logs supabase_auth_fizzix --tail 60 2>&1; echo "::endgroup::"
+          }
+          otp_token() {
+            curl -s -X POST "$api/auth/v1/verify" -H "apikey: $key" -H 'Content-Type: application/json' \
+              -d '{"phone":"+94770000002","token":"123456","type":"sms"}' | jq -r .access_token
+          }
+          login() {
+            curl -s -o /dev/null -w '%{http_code}' -X POST "$api/functions/v1/login" -H "apikey: $key" \
+              -H 'Content-Type: application/json' -d "{\"phone\":\"0770000002\",\"password\":\"$1\"}"
+          }
+          # Finish the account the password smoke test started (details, consent, complete).
+          token=$(curl -s -X POST "$api/functions/v1/login" -H "apikey: $key" -H 'Content-Type: application/json' \
+            -d '{"phone":"0770000002","password":"smoke1234"}' | jq -r .access_token)
+          version=$(curl -s "$api/rest/v1/app_config?key=eq.privacy_notice&select=value" -H "apikey: $key" | jq -r '.[0].value.version')
+          rpc() { curl -s -o /tmp/rpc.json -w '%{http_code}' -X POST "$api/rest/v1/rpc/$1" -H "apikey: $key" \
+            -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$2"; }
+          a=$(rpc save_account_details '{"p_display_name":"Smoke","p_username":"smoke_ci","p_exam_year":2027,"p_stream":"bio"}')
+          b=$(rpc record_consent "{\"p_notice_version\":\"$version\",\"p_age_band\":\"16_plus\"}")
+          c=$(rpc complete_account '{}')
+          echo "account: details $a, consent $b, complete $c ($(cat /tmp/rpc.json))"
+          sleep 46 # Auth allows one OTP per number every 45 seconds
+          req=$(curl -s -o /tmp/req.json -w '%{http_code}' -X POST "$api/functions/v1/reset-request" \
+            -H "apikey: $key" -H 'Content-Type: application/json' -d '{"phone":"0770000002"}')
+          otp=$(otp_token)
+          save=$(curl -s -o /tmp/save.json -w '%{http_code}' -X POST "$api/functions/v1/reset-password" \
+            -H "apikey: $key" -H "Authorization: Bearer $otp" -H 'Content-Type: application/json' \
+            -d '{"password":"reset1234"}')
+          # AC3: the session from before the reset no longer works.
+          before=$(curl -s -o /dev/null -w '%{http_code}' "$api/auth/v1/user" -H "apikey: $key" -H "Authorization: Bearer $token")
+          old=$(login smoke1234); new=$(login reset1234)
+          echo "reset-request -> $req ($(cat /tmp/req.json)), reset-password -> $save ($(cat /tmp/save.json)), earlier session -> $before, old -> $old, new -> $new"
+          if [ "$c" != "204" ] && [ "$c" != "200" ]; then dump; exit 1; fi
+          if [ "$req" != "200" ] || [ "$save" != "200" ] || [ "$before" = "200" ] || [ "$old" != "401" ] || [ "$new" != "200" ]; then dump; exit 1; fi
+
       - name: Generate native Android project
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --no-install

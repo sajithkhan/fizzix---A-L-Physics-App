@@ -185,3 +185,19 @@ Deno.test('public functions map AppError codes and never leak details', async ()
   assertEquals(JSON.stringify(b.body), '{"error":{"code":"internal"}}');
   assert(!JSON.stringify(b.logs).includes('secret'));
 });
+
+Deno.test('an internal error may log which step failed, and nothing else', async () => {
+  const { stageError } = await import('./handler.ts');
+  const d = deps();
+  const failing = {
+    ...spec,
+    work: () => Promise.reject(stageError('sign_out', 'session_not_found')),
+  };
+  const r = await call(d, post({ n: 1 }), failing);
+  assertEquals(r.body, { error: { code: 'internal' } });
+  assertEquals(d.logs[0]?.stage, 'sign_out:session_not_found');
+  const sneaky = { ...spec, work: () => Promise.reject(new Error('internal:phone +94771234567')) };
+  const d2 = deps();
+  await call(d2, post({ n: 1 }), sneaky);
+  assertEquals(d2.logs[0]?.stage, undefined);
+});

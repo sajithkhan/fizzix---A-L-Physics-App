@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Screen } from '@/components/screen';
 import { BrandHeader } from '@/components/brand-header';
@@ -16,12 +16,13 @@ import { logIn, type LoginError } from './login';
 /**
  * ST-54 · Screen 1. Phone number and password. Wrong details show one message that does not
  * say which one was wrong; after 5 wrong tries the server locks the number for 15 minutes.
- * "Forgot password" (ST-55) and Google sign-in are added by their own stories.
+ * "Password மறந்துவிட்டீர்களா?" opens the reset screen (ST-55). Google sign-in comes later.
  */
 export function LoginScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const router = useRouter();
+  const { reset } = useLocalSearchParams<{ reset?: string }>();
 
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -59,6 +60,15 @@ export function LoginScreen() {
         <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
           {t('login.title')}
         </Text>
+        {reset === '1' && !error ? (
+          <Text
+            testID="login-reset-done"
+            accessibilityLiveRegion="polite"
+            style={[styles.notice, { color: colors.success }]}
+          >
+            {t('login.resetDone')}
+          </Text>
+        ) : null}
         <PhoneField
           testID="login-phone"
           label={t('login.phoneLabel')}
@@ -86,6 +96,13 @@ export function LoginScreen() {
           textContentType="password"
           password={{ showLabel: t('login.showPassword'), hideLabel: t('login.hidePassword') }}
         />
+        <View style={styles.forgotRow}>
+          <TextButton
+            testID="login-forgot"
+            label={t('login.forgot')}
+            onPress={() => router.push('/reset')}
+          />
+        </View>
         {error ? <ErrorMessage testID="login-error" message={t(`login.errors.${error}`)} /> : null}
         <PrimaryButton
           testID="login-submit"
@@ -119,6 +136,8 @@ const styles = StyleSheet.create({
     gap: space.lg,
   },
   title: { fontSize: 20, fontWeight: '700' },
+  notice: { fontSize: 14, fontWeight: '600', lineHeight: 21 },
+  forgotRow: { alignItems: 'flex-end', marginTop: -8 },
   switchRow: {
     marginTop: 'auto',
     flexDirection: 'row',

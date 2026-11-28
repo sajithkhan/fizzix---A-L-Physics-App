@@ -1,7 +1,8 @@
-// ST-04 · POST /functions/v1/set-password  { password } → { ok } (ADR-0009).
+// ST-04 · POST /functions/v1/set-password  { password } → session (ADR-0009).
 // Signed-in (OTP session from ST-02); the gateway and the handler both verify the token.
 import { createHandler } from '../_shared/handler.ts';
 import { readEnv, serviceClient, userDeps } from '../_shared/runtime.ts';
+import { passwordGrant } from '../_shared/auth-grant.ts';
 import { setPasswordSpec } from './set-password.ts';
 
 const env = readEnv();
@@ -20,6 +21,7 @@ const handler = createHandler(
       if (!error) return 'ok';
       return error.code === 'weak_password' ? 'weak' : 'error';
     },
+    passwordGrant: (phone, password) => passwordGrant(env, phone, password),
   }),
   userDeps(admin),
 );

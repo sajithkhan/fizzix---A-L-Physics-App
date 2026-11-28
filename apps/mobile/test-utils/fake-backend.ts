@@ -24,6 +24,8 @@ export interface FakeBackendOptions {
   /** Error codes the password-reset Edge Functions answer with. */
   resetRequestErrorCode?: string;
   resetPasswordErrorCode?: string;
+  /** Error code the change-password Edge Function answers with. */
+  changePasswordErrorCode?: string;
   /** ST-06: this session is no longer the account's active one. */
   sessionActive?: boolean;
   /** ST-06: Auth refuses to refresh this session (signed in elsewhere). */
@@ -180,7 +182,10 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
           });
         if (name === 'set-password') {
           if (opts.passwordErrorCode) return fail(opts.passwordErrorCode);
-          return Promise.resolve({ data: { ok: true }, error: null });
+          return Promise.resolve({
+            data: { access_token: 'at1', refresh_token: 'rt1', expires_in: 3600, expires_at: 2 },
+            error: null,
+          });
         }
         if (name === 'reset-request') {
           if (opts.resetRequestErrorCode) return fail(opts.resetRequestErrorCode);
@@ -189,6 +194,13 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
         if (name === 'reset-password') {
           if (opts.resetPasswordErrorCode) return fail(opts.resetPasswordErrorCode);
           return Promise.resolve({ data: { ok: true }, error: null });
+        }
+        if (name === 'change-password') {
+          if (opts.changePasswordErrorCode) return fail(opts.changePasswordErrorCode);
+          return Promise.resolve({
+            data: { access_token: 'at2', refresh_token: 'rt2', expires_in: 3600, expires_at: 2 },
+            error: null,
+          });
         }
         if (name === 'login') {
           if (opts.loginErrorCode === 'network') {

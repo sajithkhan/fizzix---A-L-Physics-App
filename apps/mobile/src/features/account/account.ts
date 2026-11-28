@@ -132,8 +132,17 @@ export async function createAccount(
     if (!consent.ok) return consent;
 
     // Through the server, which stores only a derived password in Supabase Auth (ADR-0009).
-    const password = await callFunction<{ ok: true }>('set-password', { password: input.password });
+    // Setting a password ends the OTP session, so keep the fresh session it returns.
+    const password = await callFunction<{ access_token: string; refresh_token: string }>(
+      'set-password',
+      { password: input.password },
+    );
     if (!password.ok) return { ok: false, error: passwordError(password.code) };
+    const kept = await supabase.auth.setSession({
+      access_token: password.data.access_token,
+      refresh_token: password.data.refresh_token,
+    });
+    if (kept.error) return { ok: false, error: 'internal' };
 
     const completed = await supabase.rpc('complete_account');
     if (completed.error) return { ok: false, error: toAccountError(completed.error) };

@@ -26,3 +26,23 @@ export function maskPhone(phone: string): string {
   const cc = digits.startsWith('+') ? digits.slice(0, 3) : '';
   return `${cc}*******${digits.slice(-2)}`;
 }
+
+/** Sri Lanka has no daylight saving: always UTC+05:30. */
+const COLOMBO_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+
+/**
+ * When the next business day starts (midnight in Asia/Colombo). Daily limits and targets
+ * reset then; the server uses the same rule (private.colombo_day_start).
+ */
+export function nextBusinessDayStart(at: Date = new Date()): Date {
+  const local = at.getTime() + COLOMBO_OFFSET_MS;
+  const day = 24 * 60 * 60 * 1000;
+  const nextLocalMidnight = Math.floor(local / day) * day + day;
+  return new Date(nextLocalMidnight - COLOMBO_OFFSET_MS);
+}
+
+/** Whole hours (rounded up, at least 1) until the daily reset, for "resets in N hours". */
+export function hoursUntilReset(at: Date = new Date()): number {
+  const ms = nextBusinessDayStart(at).getTime() - at.getTime();
+  return Math.max(1, Math.ceil(ms / (60 * 60 * 1000)));
+}

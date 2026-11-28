@@ -1,0 +1,39 @@
+# ST-59 · App states — the offline banner, end to end on the emulator. Starts from a clean
+# app (language screen, no account needed), turns airplane mode on and off, and checks the
+# banner follows. Airplane mode is always turned off again when the flow ends, pass or fail,
+# and run.sh turns it off before any retry, so no later flow runs without a network.
+# Skeletons, slow-retry, empty, error and limit states are covered by component tests
+# (__tests__/app-states-test.tsx); they need a stalled server, which e2e cannot fake reliably.
+appId: lk.fizzix.app
+name: ST-59 App states
+tags:
+  - ST-59
+onFlowComplete:
+  - setAirplaneMode: disabled
+---
+- setAirplaneMode: disabled
+- stopApp
+- clearState
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: language-screen
+    timeout: 120000
+- assertNotVisible:
+    id: offline-banner
+
+# AC2: offline shows a banner on top of whatever screen is open.
+- setAirplaneMode: enabled
+- extendedWaitUntil:
+    visible:
+      id: offline-banner
+    timeout: 30000
+- assertVisible:
+    id: language-screen
+
+# Back online: the banner goes away by itself.
+- setAirplaneMode: disabled
+- extendedWaitUntil:
+    notVisible:
+      id: offline-banner
+    timeout: 60000

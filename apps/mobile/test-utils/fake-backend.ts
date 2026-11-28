@@ -229,6 +229,8 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
   mockedGetSupabase.mockReturnValue(client as unknown as ReturnType<typeof getSupabase>);
   return {
     calls,
+    /** The fake client itself, for tests that need to slow or spy on one call. */
+    client,
     /** Simulates the admin publishing a new notice version. */
     publishNotice(version: string) {
       notice = { version, url: notice?.url ?? NOTICE.url };

@@ -7,7 +7,8 @@ import type { Locale } from '@fizzix/shared';
 import { createI18n } from '@/i18n';
 import { loadSavedLocale } from '@/lib/locale-store';
 import { LocaleContext } from '@/features/language/locale-context';
-import { Loading } from '@/components/loading';
+import { ScreenSkeleton } from '@/components/skeleton';
+import { OfflineBanner } from '@/components/offline-banner';
 import { SessionGuard } from '@/features/session/session-guard';
 import { useTheme } from '@/theme';
 
@@ -45,9 +46,10 @@ export default function RootLayout() {
               }}
             />
             <SessionGuard />
+            <OfflineBanner />
           </LocaleContext.Provider>
         ) : (
-          <Loading />
+          <ScreenSkeleton />
         )}
       </I18nextProvider>
     </SafeAreaProvider>

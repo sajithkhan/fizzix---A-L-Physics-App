@@ -21,6 +21,9 @@ export interface FakeBackendOptions {
   loginErrorCode?: string;
   /** Start without a session (signed out). */
   signedOut?: boolean;
+  /** Error codes the password-reset Edge Functions answer with. */
+  resetRequestErrorCode?: string;
+  resetPasswordErrorCode?: string;
   /** Logging out fails as if offline. */
   signOutError?: boolean;
   completeError?: FakeError;
@@ -37,6 +40,7 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
     functions: [] as Array<[string, unknown]>,
     setSession: [] as unknown[],
     signOut: [] as unknown[],
+    verifyOtp: [] as unknown[],
   };
   let completed = opts.completed ?? false;
   let notice = opts.notice === undefined ? NOTICE : opts.notice;
@@ -125,6 +129,17 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
         Promise.resolve({
           data: { session: signedIn ? { user: { id: 'u1', phone: '94770000003' } } : null },
         }),
+      verifyOtp: (args: { phone: string; token: string }) => {
+        calls.verifyOtp.push(args);
+        if (args.token !== '123456') {
+          return Promise.resolve({
+            data: { session: null },
+            error: { name: 'AuthApiError', code: 'otp_expired', status: 403 },
+          });
+        }
+        signedIn = true;
+        return Promise.resolve({ data: { session: { user: { id: 'u1' } } }, error: null });
+      },
       signOut: (args: unknown) => {
         calls.signOut.push(args);
         if (opts.signOutError) {
@@ -152,6 +167,14 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
           });
         if (name === 'set-password') {
           if (opts.passwordErrorCode) return fail(opts.passwordErrorCode);
+          return Promise.resolve({ data: { ok: true }, error: null });
+        }
+        if (name === 'reset-request') {
+          if (opts.resetRequestErrorCode) return fail(opts.resetRequestErrorCode);
+          return Promise.resolve({ data: { ok: true }, error: null });
+        }
+        if (name === 'reset-password') {
+          if (opts.resetPasswordErrorCode) return fail(opts.resetPasswordErrorCode);
           return Promise.resolve({ data: { ok: true }, error: null });
         }
         if (name === 'login') {

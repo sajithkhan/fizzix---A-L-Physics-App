@@ -16,6 +16,8 @@ export interface AuthUser {
   id: string;
   /** Verified phone, E.164 (+947…), when the account has one. */
   phone?: string;
+  /** How and when this session was authenticated (JWT `amr`), e.g. a fresh OTP. */
+  amr?: Array<{ method: string; timestamp: number }>;
 }
 
 export interface Deps {
@@ -43,6 +45,8 @@ export interface Context {
   user: AuthUser;
   premium: boolean;
   requestId: string;
+  /** The caller's own access token, for Auth calls on their behalf. Never log it. */
+  accessToken: string;
 }
 
 export interface FunctionSpec<In extends z.ZodTypeAny, Out extends z.ZodTypeAny> {
@@ -146,7 +150,7 @@ export function createHandler<In extends z.ZodTypeAny, Out extends z.ZodTypeAny>
       const premium = await deps.isPremium(user.id);
       if (spec.requiresPremium && !premium) return fail('premium_required');
 
-      const result = await spec.work({ user, premium, requestId }, parsed.data);
+      const result = await spec.work({ user, premium, requestId, accessToken: token }, parsed.data);
 
       const out = spec.output.safeParse(result);
       if (!out.success) return fail('internal');

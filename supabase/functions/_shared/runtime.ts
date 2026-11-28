@@ -9,6 +9,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Deps, LogEntry, PublicDeps } from './handler.ts';
 import { requirePepper } from './password.ts';
+import { tokenAmr } from './jwt.ts';
 
 export interface Env {
   url: string;
@@ -52,7 +53,8 @@ export function userDeps(admin: SupabaseClient): Deps {
       const { data, error } = await admin.auth.getUser(token);
       if (error || !data.user) return null;
       const phone = data.user.phone ? `+${data.user.phone.replace(/^\+/, '')}` : undefined;
-      return phone ? { id: data.user.id, phone } : { id: data.user.id };
+      const amr = tokenAmr(token);
+      return { id: data.user.id, ...(phone ? { phone } : {}), ...(amr ? { amr } : {}) };
     },
     async rateLimit(userId, action, max, windowSeconds) {
       const { data, error } = await admin.rpc('edge_rate_limit', {

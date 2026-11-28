@@ -278,6 +278,7 @@ max_frequency = "45s"
 94770000005 = "123456"
 94770000006 = "123456"
 94770000007 = "123456"
+94770000008 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
@@ -442,4 +443,12 @@ verify_jwt = false
 
 # ST-04 password step: needs the OTP session.
 [functions.set-password]
+verify_jwt = true
+
+# ST-55 password reset: asking for the OTP is public (own IP limit); saving needs the OTP
+# session (ADR-0011).
+[functions.reset-request]
+verify_jwt = false
+
+[functions.reset-password]
 verify_jwt = true

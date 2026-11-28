@@ -157,8 +157,11 @@ jobs:
           direct=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$api/auth/v1/token?grant_type=password" \
             -H "apikey: $EXPO_PUBLIC_SUPABASE_ANON_KEY" -H 'Content-Type: application/json' \
             -d '{"phone":"94770000002","password":"smoke1234"}')
-          echo "set-password -> $set_pw ($(cat /tmp/set.json)), login -> $good, wrong -> $bad, direct Auth -> $direct"
-          if [ "$set_pw" != "200" ] || [ "$good" != "200" ] || [ "$bad" != "401" ] || [ "$direct" = "200" ]; then
+          # Setting the password ends the OTP session; the session it returns must work.
+          kept=$(curl -s -o /dev/null -w '%{http_code}' "$api/auth/v1/user" -H "apikey: $EXPO_PUBLIC_SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $(jq -r .access_token /tmp/set.json)")
+          echo "set-password -> $set_pw, its session -> $kept, login -> $good, wrong -> $bad, direct Auth -> $direct"
+          if [ "$set_pw" != "200" ] || [ "$kept" != "200" ] || [ "$good" != "200" ] || [ "$bad" != "401" ] || [ "$direct" = "200" ]; then
             echo "::group::edge runtime log"; docker logs supabase_edge_runtime_fizzix --tail 80 2>&1; echo "::endgroup::"
             exit 1
           fi

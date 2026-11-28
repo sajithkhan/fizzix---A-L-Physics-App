@@ -182,7 +182,10 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
           });
         if (name === 'set-password') {
           if (opts.passwordErrorCode) return fail(opts.passwordErrorCode);
-          return Promise.resolve({ data: { ok: true }, error: null });
+          return Promise.resolve({
+            data: { access_token: 'at1', refresh_token: 'rt1', expires_in: 3600, expires_at: 2 },
+            error: null,
+          });
         }
         if (name === 'reset-request') {
           if (opts.resetRequestErrorCode) return fail(opts.resetRequestErrorCode);

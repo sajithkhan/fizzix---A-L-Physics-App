@@ -25,7 +25,10 @@ Auth's password sign-in directly.
   guesses of the real password can never succeed, so the lockout cannot be bypassed. CI
   checks this: a direct Auth sign-in with the real password must fail.
 - Setting the password at sign-up moves to the `set-password` Edge Function (ST-04 step 2),
-  allowed only before the account is complete. Reset (ST-55) and change (ST-56) will use the
+  allowed only before the account is complete. Supabase Auth ends every session when a
+  password is set, so the function signs in with the new password and returns that session
+  for the app to keep (found in ST-56; before that the sign-up session lived only until its
+  access token expired). Reset (ST-55) and change (ST-56) will use the
   same derivation.
 - Lockout: `private.login_failures` per number key, `private.login_ip_hits` per IP key, in
   15-minute windows (`app_config`: `login_max_failures` 5, `login_lock_minutes` 15,

@@ -199,6 +199,8 @@ describe('ST-04 AC4: create the account', () => {
       ],
     );
     expect(calls.functions).toEqual([['set-password', { password: 'physics26' }]]);
+    // Setting the password ends the OTP session; the fresh one from the server is kept.
+    expect(calls.setSession).toEqual([{ access_token: 'at1', refresh_token: 'rt1' }]);
     expect(screen.getByText(ta.home.title)).toBeOnTheScreen();
   });
 

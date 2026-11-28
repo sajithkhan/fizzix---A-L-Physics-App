@@ -10,14 +10,20 @@ import { setPasswordSpec, type SetPasswordDeps } from './set-password.ts';
 const PEPPER = 'k'.repeat(48);
 const USER = { id: '11111111-1111-4111-8111-111111111111', phone: '+94770000003' };
 
+const SESSION = { access_token: 'at', refresh_token: 'rt', expires_in: 3600, expires_at: 2 };
+
 function fake(overrides: Partial<SetPasswordDeps> = {}) {
-  const calls = { set: [] as Array<[string, string]> };
+  const calls = { set: [] as Array<[string, string]>, grant: [] as Array<[string, string]> };
   const deps: SetPasswordDeps = {
     pepper: PEPPER,
     accountCompleted: () => Promise.resolve(false),
     setAuthPassword: (id, password) => {
       calls.set.push([id, password]);
       return Promise.resolve('ok');
+    },
+    passwordGrant: (phone, password) => {
+      calls.grant.push([phone, password]);
+      return Promise.resolve({ kind: 'ok', session: SESSION });
     },
     ...overrides,
   };
@@ -50,12 +56,20 @@ async function call(
   return { status: res.status, body: await res.json(), logs };
 }
 
-Deno.test('stores the derived password for the signed-in student', async () => {
+Deno.test('stores the derived password and returns a fresh session for this phone', async () => {
   const { deps, calls } = fake();
   const r = await call(deps, { password: 'physics26' });
   assertEquals(r.status, 200);
-  assertEquals(r.body, { ok: true });
-  assertEquals(calls.set, [[USER.id, await derivePassword(PEPPER, USER.phone, 'physics26')]]);
+  assertEquals(r.body, SESSION);
+  const derived = await derivePassword(PEPPER, USER.phone, 'physics26');
+  assertEquals(calls.set, [[USER.id, derived]]);
+  // Auth ends the OTP session when the password is set, so the app needs this new one.
+  assertEquals(calls.grant, [[USER.phone, derived]]);
+});
+
+Deno.test('if signing in with the new password fails, the step reports an error', async () => {
+  const { deps } = fake({ passwordGrant: () => Promise.resolve({ kind: 'error' }) });
+  assertEquals((await call(deps, { password: 'physics26' })).status, 500);
 });
 
 Deno.test('the server applies the password rules', async () => {

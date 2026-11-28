@@ -73,8 +73,10 @@ insert into public.app_config (key, value) values ('otp_test_numbers', '["947711
 on conflict (key) do update set value = public.app_config.value || '["94771111111"]';
 select is(private.send_sms_hook(pg_temp.event('94771111111')), '{}'::jsonb,
   'with a reset intent the registered number gets its OTP');
-select private.send_sms_hook(pg_temp.event('94771111111'));
-select private.send_sms_hook(pg_temp.event('94771111111'));
+do $$ begin
+  perform private.send_sms_hook(pg_temp.event('94771111111'));
+  perform private.send_sms_hook(pg_temp.event('94771111111'));
+end $$;
 select is(pg_temp.err(private.send_sms_hook(pg_temp.event('94771111111'))), 'otp_rate_limited',
   'the 3-per-hour limit applies to reset OTPs too');
 
@@ -85,8 +87,10 @@ select is(public.reset_allowed('11111111-1111-1111-1111-111111111111'), false,
   'after 10 minutes the reset window closes');
 
 -- Finishing closes the intent -------------------------------------------------------------------------
-select public.reset_request('94771111111', repeat('b', 64));
-select public.reset_finished('11111111-1111-1111-1111-111111111111');
+do $$ begin
+  perform public.reset_request('94771111111', repeat('b', 64));
+  perform public.reset_finished('11111111-1111-1111-1111-111111111111');
+end $$;
 select is(public.reset_allowed('11111111-1111-1111-1111-111111111111'), false,
   'after the new password is saved the same window cannot be reused');
 

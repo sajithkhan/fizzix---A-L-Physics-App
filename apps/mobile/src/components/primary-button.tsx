@@ -7,6 +7,8 @@ interface Props {
   disabled?: boolean;
   /** Shows a spinner and blocks presses while a request is running. */
   loading?: boolean;
+  /** Red, for actions that cannot be undone (delete account). */
+  destructive?: boolean;
   testID?: string;
 }
 
@@ -15,6 +17,7 @@ export function PrimaryButton({
   onPress,
   disabled = false,
   loading = false,
+  destructive = false,
   testID,
 }: Props) {
   const { colors } = useTheme();
@@ -29,7 +32,10 @@ export function PrimaryButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: colors.primary, opacity: disabled ? 0.5 : pressed ? 0.85 : 1 },
+        {
+          backgroundColor: destructive ? colors.danger : colors.primary,
+          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
+        },
       ]}
     >
       {loading ? (

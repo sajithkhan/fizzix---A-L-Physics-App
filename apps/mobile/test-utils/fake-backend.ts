@@ -26,6 +26,8 @@ export interface FakeBackendOptions {
   resetPasswordErrorCode?: string;
   /** Error code the change-password Edge Function answers with. */
   changePasswordErrorCode?: string;
+  /** Error code the delete-account Edge Function answers with. */
+  deleteAccountErrorCode?: string;
   /** ST-06: this session is no longer the account's active one. */
   sessionActive?: boolean;
   /** ST-06: Auth refuses to refresh this session (signed in elsewhere). */
@@ -201,6 +203,14 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
             data: { access_token: 'at2', refresh_token: 'rt2', expires_in: 3600, expires_at: 2 },
             error: null,
           });
+        }
+        if (name === 'delete-account') {
+          if (opts.deleteAccountErrorCode === 'network') {
+            return Promise.resolve({ data: null, error: { name: 'FunctionsFetchError' } });
+          }
+          if (opts.deleteAccountErrorCode) return fail(opts.deleteAccountErrorCode);
+          completed = false;
+          return Promise.resolve({ data: { ok: true }, error: null });
         }
         if (name === 'login') {
           if (opts.loginErrorCode === 'network') {

@@ -5,5 +5,5 @@
 -- config.toml, which gives them the fixed code 123456. The SMS hook lets them through
 -- without calling the SMS provider.
 insert into public.app_config (key, value, is_public) values
-  ('otp_test_numbers', '["94770000001", "94770000002", "94770000003", "94770000004", "94770000005", "94770000006", "94770000007", "94770000008", "94770000010", "94770000011"]', false)
+  ('otp_test_numbers', '["94770000001", "94770000002", "94770000003", "94770000004", "94770000005", "94770000006", "94770000007", "94770000008", "94770000010", "94770000011", "94770000012"]', false)
 on conflict (key) do update set value = excluded.value, is_public = false;

@@ -13,7 +13,7 @@ import { loadMyProfile, type MyProfile } from './profile';
 
 /**
  * Screen 9 · Settings. ST-07: profile card and logout (with a confirm step). ST-56: change
- * password. The other rows (theme, language, Premium, delete account) come with their stories.
+ * password. ST-57: delete account. The other rows (theme, language, Premium) come later.
  */
 export function SettingsScreen() {
   const { t } = useTranslation();
@@ -127,6 +127,16 @@ export function SettingsScreen() {
             {t('settings.logoutHint')}
           </Text>
         </Pressable>
+        <Pressable
+          testID="settings-delete-account"
+          accessibilityRole="button"
+          onPress={() => router.push('/delete-account')}
+          style={[styles.row, styles.rowTop, { borderTopColor: colors.surfaceBorder }]}
+        >
+          <Text style={[styles.rowMuted, { color: colors.textMuted }]}>
+            {t('settings.deleteAccount')}
+          </Text>
+        </Pressable>
       </View>
 
       <ConfirmDialog
@@ -177,5 +187,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   chevron: { fontSize: 18 },
+  rowTop: { borderTopWidth: 1 },
+  rowMuted: { fontSize: 14 },
   rowHint: { fontSize: 12 },
 });

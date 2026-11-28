@@ -1,0 +1,110 @@
+# ST-57 · Delete my account — end to end against a local Supabase and the delete-account Edge
+# Function. Test number 0770000012 (OTP 123456). After deleting, the number can no longer log
+# in and can sign up again from scratch. Keyboard: Enter closes it.
+appId: lk.fizzix.app
+name: ST-57 Delete my account
+tags:
+  - ST-57
+---
+- runFlow:
+    file: subflows/sign-up.yaml
+    env:
+      PHONE: '0770000012'
+      NAME: 'Sara Ali'
+      USERNAME: 'sara_e2e'
+
+# AC1: Settings › "கணக்கை நீக்கு" explains what is deleted and asks for the password.
+- tapOn:
+    id: home-settings
+- scrollUntilVisible:
+    element:
+      id: settings-delete-account
+- tapOn:
+    id: settings-delete-account
+- extendedWaitUntil:
+    visible:
+      id: delete-account-screen
+    timeout: 20000
+- assertVisible: '.*பயிற்சி முடிவுகள்.*'
+- assertVisible: '.*payment பதிவுகள் மட்டும்.*'
+- assertVisible: '.*30 நாட்களுக்குள்.*'
+
+# AC3: the Play subscription note and link (not opened: it leaves the app).
+- assertVisible: '.*Google Play சந்தா தானாக ரத்தாகாது.*'
+- assertVisible:
+    id: delete-play-link
+
+# A wrong password deletes nothing.
+- scrollUntilVisible:
+    element:
+      id: delete-password
+- tapOn:
+    id: delete-password
+- inputText: 'guess1234'
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: delete-confirm
+- tapOn:
+    id: delete-confirm
+- extendedWaitUntil:
+    visible:
+      id: delete-password-status
+    timeout: 20000
+
+# AC2: the right password deletes the account; login says so.
+- tapOn:
+    id: delete-password
+- inputText: 'physics26'
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: delete-confirm
+- tapOn:
+    id: delete-confirm
+- extendedWaitUntil:
+    visible:
+      id: login-deleted
+    timeout: 30000
+- assertVisible: 'உங்கள் கணக்கு நீக்கப்பட்டது.'
+
+# The account is really gone: the password no longer logs in...
+- tapOn:
+    id: login-phone
+- inputText: '0770000012'
+- pressKey: Enter
+- tapOn:
+    id: login-password
+- inputText: 'physics26'
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: login-error
+    timeout: 20000
+- assertVisible: '.*இலக்கம் அல்லது password தவறு.*'
+
+# ...and the number can sign up again from the start (no "already registered").
+- tapOn:
+    id: login-register-link
+- extendedWaitUntil:
+    visible:
+      id: register-screen
+    timeout: 20000
+- tapOn:
+    id: register-phone
+- inputText: '0770000012'
+- tapOn: 'புதிய கணக்கு'
+- tapOn:
+    id: register-send-otp
+- extendedWaitUntil:
+    visible:
+      id: register-verify
+    timeout: 20000
+- inputText: '123456'
+- tapOn: 'புதிய கணக்கு'
+- tapOn:
+    id: register-verify
+- extendedWaitUntil:
+    visible:
+      id: account-screen
+    timeout: 20000

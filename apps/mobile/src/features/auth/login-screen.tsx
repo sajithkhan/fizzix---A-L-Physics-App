@@ -22,7 +22,11 @@ export function LoginScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const router = useRouter();
-  const { reset, reason } = useLocalSearchParams<{ reset?: string; reason?: string }>();
+  const { reset, reason, deleted } = useLocalSearchParams<{
+    reset?: string;
+    reason?: string;
+    deleted?: string;
+  }>();
 
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -67,6 +71,15 @@ export function LoginScreen() {
             style={[styles.notice, { color: colors.warning }]}
           >
             {t('login.signedOutElsewhere')}
+          </Text>
+        ) : null}
+        {deleted === '1' && !error ? (
+          <Text
+            testID="login-deleted"
+            accessibilityLiveRegion="polite"
+            style={[styles.notice, { color: colors.textMuted }]}
+          >
+            {t('login.accountDeleted')}
           </Text>
         ) : null}
         {reset === '1' && !error ? (

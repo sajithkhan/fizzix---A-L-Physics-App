@@ -35,7 +35,15 @@ export async function checkActiveSession(): Promise<'active' | 'elsewhere' | 'un
 }
 
 /** ST-06 · this phone was signed out by a sign-in elsewhere: drop its session here too. */
-export async function endElsewhereSession(): Promise<void> {
+export function endElsewhereSession(): Promise<void> {
+  return forgetSessionOnThisPhone();
+}
+
+/**
+ * Removes the session and cached account state from this phone without needing the server
+ * (the session may already be gone there: signed in elsewhere, account deleted).
+ */
+export async function forgetSessionOnThisPhone(): Promise<void> {
   const supabase = getSupabase();
   try {
     await supabase?.auth.signOut({ scope: 'local' });

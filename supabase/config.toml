@@ -281,6 +281,7 @@ max_frequency = "45s"
 94770000008 = "123456"
 94770000010 = "123456"
 94770000011 = "123456"
+94770000012 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
@@ -459,4 +460,8 @@ verify_jwt = true
 
 # ST-56 change password: signed in (ADR-0013).
 [functions.change-password]
+verify_jwt = true
+
+# ST-57 delete account: signed in (ADR-0014).
+[functions.delete-account]
 verify_jwt = true

@@ -3,21 +3,65 @@ import { getSupabase } from './supabase';
 import { fetchConsentStatus } from '@/features/consent/consent';
 
 /**
- * Where a student is: no session, verified number only, a finished account that must accept
- * a new privacy notice (ST-58), or a finished account.
+ * Where a student is: no session, signed out because the account signed in on another phone
+ * (ST-06), verified number only, a finished account that must accept a new privacy notice
+ * (ST-58), or a finished account.
  */
-export type AuthState = 'signed_out' | 'needs_account' | 'needs_consent' | 'complete';
+export type AuthState =
+  'signed_out' | 'signed_out_elsewhere' | 'needs_account' | 'needs_consent' | 'complete';
 
 /** Remembered on the device so a finished account opens home even when offline. */
 export const ACCOUNT_COMPLETE_KEY = 'fizzix.account_complete';
+
+function isElsewhere(error: unknown): boolean {
+  const message = (error as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && message.includes('signed_in_elsewhere');
+}
+
+/**
+ * ST-06 · is this phone's session still the account's active one? 'unknown' when the
+ * server cannot be reached (the app then carries on and asks again later).
+ */
+export async function checkActiveSession(): Promise<'active' | 'elsewhere' | 'unknown'> {
+  const supabase = getSupabase();
+  if (!supabase) return 'unknown';
+  try {
+    const { data, error } = await supabase.rpc('session_status');
+    if (error) return isElsewhere(error) ? 'elsewhere' : 'unknown';
+    return data === false ? 'elsewhere' : 'active';
+  } catch {
+    return 'unknown';
+  }
+}
+
+/** ST-06 · this phone was signed out by a sign-in elsewhere: drop its session here too. */
+export async function endElsewhereSession(): Promise<void> {
+  const supabase = getSupabase();
+  try {
+    await supabase?.auth.signOut({ scope: 'local' });
+  } catch {
+    // The server already ended it; nothing else to do.
+  }
+  await AsyncStorage.removeItem(ACCOUNT_COMPLETE_KEY).catch(() => undefined);
+}
 
 export async function getAuthState(): Promise<AuthState> {
   const supabase = getSupabase();
   if (!supabase) return 'signed_out';
   try {
-    const { data } = await supabase.auth.getSession();
+    const { data, error: sessionError } = await supabase.auth.getSession();
+    // Auth refuses to refresh a session that is no longer the active one.
+    if (sessionError && isElsewhere(sessionError)) {
+      await endElsewhereSession();
+      return 'signed_out_elsewhere';
+    }
     const userId = data.session?.user.id;
     if (!userId) return 'signed_out';
+
+    if ((await checkActiveSession()) === 'elsewhere') {
+      await endElsewhereSession();
+      return 'signed_out_elsewhere';
+    }
 
     const { data: profile, error } = await supabase
       .from('profiles')

@@ -17,7 +17,8 @@ bash e2e/run.sh        # all flows in one Maestro session; retries a failed flow
 
 The app must point at a local Supabase (`supabase start`, with the edge runtime for the
 `login` and `set-password` functions and `PASSWORD_PEPPER` set to any 32+ character value)
-for flows that sign in. Build with
+for flows that sign in. `run.sh` passes `SUPABASE_URL` and `SUPABASE_ANON_KEY` to Maestro
+for the ST-06 flow, which logs in "another phone" from the test machine (`scripts/`). Build with
 `EXPO_PUBLIC_SUPABASE_URL=http://10.0.2.2:54321`, the local anon key and
 `E2E_ALLOW_CLEARTEXT=1`, as the CI job does. Test numbers and their OTP (123456) come from
 `supabase/config.toml` and `supabase/seed.sql`.

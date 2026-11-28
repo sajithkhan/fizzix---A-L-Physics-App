@@ -22,7 +22,7 @@ export function LoginScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const router = useRouter();
-  const { reset } = useLocalSearchParams<{ reset?: string }>();
+  const { reset, reason } = useLocalSearchParams<{ reset?: string; reason?: string }>();
 
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -60,6 +60,15 @@ export function LoginScreen() {
         <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
           {t('login.title')}
         </Text>
+        {reason === 'elsewhere' && !error ? (
+          <Text
+            testID="login-elsewhere"
+            accessibilityLiveRegion="polite"
+            style={[styles.notice, { color: colors.warning }]}
+          >
+            {t('login.signedOutElsewhere')}
+          </Text>
+        ) : null}
         {reset === '1' && !error ? (
           <Text
             testID="login-reset-done"

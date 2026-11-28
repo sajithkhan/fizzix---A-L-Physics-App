@@ -27,7 +27,7 @@ reset_test_data() {
     return 0
   fi
   docker exec -i "$DB_CONTAINER" psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL' >/dev/null
-delete from auth.users where phone like '9477000000_';
+delete from auth.users where phone like '947700000__';
 delete from private.login_failures;
 delete from private.login_ip_hits;
 delete from private.rate_limits;
@@ -42,9 +42,12 @@ fresh_install() {
   adb install "$APK" >/dev/null
 }
 
+# ST-06 flows log in from "another phone" with Maestro's http client on this machine.
+ENV_ARGS=(-e "SUPABASE_URL=${SUPABASE_URL:-http://127.0.0.1:54321}" -e "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}}")
+
 reset_test_data
 adb logcat -c || true
-if maestro test "$DIR" --format junit --output "$OUT/all.xml" --debug-output "$OUT/all"; then
+if maestro test "${ENV_ARGS[@]}" "$DIR" --format junit --output "$OUT/all.xml" --debug-output "$OUT/all"; then
   echo "PASSED all flows in one session"
   exit 0
 fi
@@ -93,7 +96,7 @@ for flow in $failed; do
   reset_test_data
   fresh_install
   adb logcat -c || true
-  if maestro test "$flow" --format junit --output "$OUT/$name-retry.xml" --debug-output "$OUT/$name-retry"; then
+  if maestro test "${ENV_ARGS[@]}" "$flow" --format junit --output "$OUT/$name-retry.xml" --debug-output "$OUT/$name-retry"; then
     echo "PASSED $name (on retry)"
     continue
   fi

@@ -29,3 +29,15 @@ export function hasFreshOtp(
       nowSeconds - a.timestamp <= maxAgeSeconds,
   );
 }
+
+/** The `session_id` claim of a token Auth has just verified, or undefined. */
+export function tokenSessionId(token: string): string | undefined {
+  try {
+    const part = token.split('.')[1] ?? '';
+    const json = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+    const sid = json?.session_id;
+    return typeof sid === 'string' && /^[0-9a-f-]{36}$/i.test(sid) ? sid : undefined;
+  } catch {
+    return undefined;
+  }
+}

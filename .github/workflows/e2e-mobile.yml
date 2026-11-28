@@ -205,6 +205,27 @@ jobs:
           if [ "$c" != "204" ] && [ "$c" != "200" ]; then dump; exit 1; fi
           if [ "$req" != "200" ] || [ "$save" != "200" ] || [ "$before" = "200" ] || [ "$old" != "401" ] || [ "$new" != "200" ]; then dump; exit 1; fi
 
+      # ST-06: two logins for the same account; only the newest session stays active.
+      - name: Smoke-test one active device against the local Supabase
+        run: |
+          api=http://127.0.0.1:54321
+          key="$EXPO_PUBLIC_SUPABASE_ANON_KEY"
+          login() {
+            curl -s -X POST "$api/functions/v1/login" -H "apikey: $key" -H 'Content-Type: application/json' \
+              -d '{"phone":"0770000002","password":"reset1234"}' | jq -r .access_token
+          }
+          status() {
+            curl -s -X POST "$api/rest/v1/rpc/session_status" -H "apikey: $key" \
+              -H "Authorization: Bearer $1" -H 'Content-Type: application/json' -d '{}'
+          }
+          a=$(login); b=$(login)
+          sa=$(status "$a"); sb=$(status "$b")
+          echo "first phone active: $sa, second phone active: $sb"
+          if [ "$sa" != "false" ] || [ "$sb" != "true" ]; then
+            echo "::group::auth log"; docker logs supabase_auth_fizzix --tail 60 2>&1; echo "::endgroup::"
+            exit 1
+          fi
+
       - name: Generate native Android project
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --no-install

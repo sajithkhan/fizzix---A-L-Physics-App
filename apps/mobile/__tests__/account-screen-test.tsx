@@ -182,20 +182,22 @@ describe('ST-04 AC4: create the account', () => {
     await fireEvent.press(screen.getByTestId('account-submit'));
 
     await waitFor(() => expect(router.getPathname()).toBe('/home'));
-    expect(calls.rpc.filter(([n]) => n !== 'username_available')).toEqual([
+    expect(calls.rpc.filter(([n]) => n !== 'username_available' && n !== 'session_status')).toEqual(
       [
-        'save_account_details',
-        {
-          p_display_name: 'Arjun Kumar',
-          p_username: 'arjun_27',
-          p_exam_year: 2027,
-          p_stream: 'bio',
-          p_school: 'Jaffna Hindu College',
-        },
+        [
+          'save_account_details',
+          {
+            p_display_name: 'Arjun Kumar',
+            p_username: 'arjun_27',
+            p_exam_year: 2027,
+            p_stream: 'bio',
+            p_school: 'Jaffna Hindu College',
+          },
+        ],
+        ['record_consent', { p_notice_version: '2026-11', p_age_band: '16_plus' }],
+        ['complete_account', undefined],
       ],
-      ['record_consent', { p_notice_version: '2026-11', p_age_band: '16_plus' }],
-      ['complete_account', undefined],
-    ]);
+    );
     expect(calls.functions).toEqual([['set-password', { password: 'physics26' }]]);
     expect(screen.getByText(ta.home.title)).toBeOnTheScreen();
   });

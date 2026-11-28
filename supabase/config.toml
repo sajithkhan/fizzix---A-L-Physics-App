@@ -279,6 +279,7 @@ max_frequency = "45s"
 94770000006 = "123456"
 94770000007 = "123456"
 94770000008 = "123456"
+94770000010 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
@@ -299,9 +300,11 @@ enabled = true
 uri = "pg-functions://postgres/private/send_sms_hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# [auth.hook.custom_access_token]
-# enabled = true
-# uri = "pg-functions://<database>/<schema>/<hook_name>"
+# ST-06 one active device: a new sign-in becomes the active session; refreshing any other
+# session is refused (ADR-0012). Available on the Free plan.
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/private/custom_access_token_hook"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 # Placeholder provider, local/CI only. Supabase Auth refuses phone sign-in ("Unsupported

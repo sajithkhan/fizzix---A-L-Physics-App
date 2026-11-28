@@ -38,7 +38,8 @@
       "internal": "යමක් වැරදී ඇත. නැවත උත්සාහ කරන්න."
     },
     "forgot": "Password අමතකද?",
-    "resetDone": "Password වෙනස් කළා. නව password එකෙන් ඇතුල් වන්න."
+    "resetDone": "Password වෙනස් කළා. නව password එකෙන් ඇතුල් වන්න.",
+    "signedOutElsewhere": "ඔබගේ ගිණුම වෙනත් phone එකක ඇතුල් වූ නිසා මෙම phone එකෙන් ඉවත් කළා. වරකට එක phone එකක පමණක් භාවිත කළ හැක."
   },
   "reset": {
     "title": "Password යළි සකසන්න",

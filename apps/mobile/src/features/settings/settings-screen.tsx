@@ -6,6 +6,7 @@ import { formatSlMobileLocal } from '@fizzix/shared';
 import { Screen } from '@/components/screen';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ErrorMessage } from '@/components/error-message';
+import { SkeletonBlock } from '@/components/skeleton';
 import { analytics } from '@/lib/analytics';
 import { signOut } from '@/lib/session';
 import { radius, space, useTheme } from '@/theme';
@@ -72,24 +73,31 @@ export function SettingsScreen() {
         <View style={[styles.avatar, { backgroundColor: colors.glyph }]}>
           <Text style={[styles.avatarText, { color: colors.glyphText }]}>{initial}</Text>
         </View>
-        <View style={styles.profileText}>
-          {profile?.name ? (
-            <Text style={[styles.name, { color: colors.text }]}>{profile.name}</Text>
-          ) : null}
-          {profile?.phone ? (
-            <Text style={[styles.meta, { color: colors.textMuted }]}>
-              {`+94 ${formatSlMobileLocal(profile.phone)}`}
-            </Text>
-          ) : null}
-          {profile?.examYear && profile.stream ? (
-            <Text style={[styles.meta, { color: colors.textMuted }]}>
-              {t('settings.examStream', {
-                year: profile.examYear,
-                stream: t(`account.streams.${profile.stream}`),
-              })}
-            </Text>
-          ) : null}
-        </View>
+        {profile === null ? (
+          <View testID="settings-profile-loading" style={styles.profileText}>
+            <SkeletonBlock width="60%" height={18} />
+            <SkeletonBlock width="45%" height={14} />
+          </View>
+        ) : (
+          <View style={styles.profileText}>
+            {profile?.name ? (
+              <Text style={[styles.name, { color: colors.text }]}>{profile.name}</Text>
+            ) : null}
+            {profile?.phone ? (
+              <Text style={[styles.meta, { color: colors.textMuted }]}>
+                {`+94 ${formatSlMobileLocal(profile.phone)}`}
+              </Text>
+            ) : null}
+            {profile?.examYear && profile.stream ? (
+              <Text style={[styles.meta, { color: colors.textMuted }]}>
+                {t('settings.examStream', {
+                  year: profile.examYear,
+                  stream: t(`account.streams.${profile.stream}`),
+                })}
+              </Text>
+            ) : null}
+          </View>
+        )}
       </View>
 
       {failed ? (

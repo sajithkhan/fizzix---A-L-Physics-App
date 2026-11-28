@@ -31,3 +31,6 @@ jest.mock('expo-secure-store', () => {
     }),
   };
 });
+
+// NetInfo has no native module in Jest: a controllable stand-in (test-utils/netinfo-mock.ts).
+jest.mock('@react-native-community/netinfo', () => require('./test-utils/netinfo-mock'));

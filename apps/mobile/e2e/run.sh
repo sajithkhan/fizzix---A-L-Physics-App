@@ -45,6 +45,7 @@ fresh_install() {
 # ST-06 flows log in from "another phone" with Maestro's http client on this machine.
 ENV_ARGS=(-e "SUPABASE_URL=${SUPABASE_URL:-http://127.0.0.1:54321}" -e "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}}")
 
+adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
 reset_test_data
 adb logcat -c || true
 if maestro test "${ENV_ARGS[@]}" "$DIR" --format junit --output "$OUT/all.xml" --debug-output "$OUT/all"; then
@@ -93,6 +94,8 @@ FAILED=0
 for flow in $failed; do
   name="$(basename "$flow" .yaml)"
   echo "::warning::$name failed in the combined run; retrying it once on its own"
+  # ST-59 turns airplane mode on; never retry (or carry on) without a network.
+  adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
   reset_test_data
   fresh_install
   adb logcat -c || true

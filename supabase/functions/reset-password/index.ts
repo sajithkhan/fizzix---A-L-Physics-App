@@ -34,11 +34,18 @@ Deno.serve(
         if (error) throw new Error('internal');
       },
       async signOutEverywhere(accessToken) {
-        // Supabase Auth keeps other sessions alive after a password change, so end them
-        // here (AC3). Retry once; if it still fails, report an error rather than success.
+        // End every session (AC3). Auth may already have ended them when the password
+        // changed; "session not found" then means the job is done. Retry other errors once.
+        const gone = (e: { status?: number; code?: string } | null) =>
+          !e ||
+          e.status === 401 ||
+          e.status === 403 ||
+          e.status === 404 ||
+          e.code === 'session_not_found';
         let { error } = await admin.auth.admin.signOut(accessToken, 'global');
-        if (error) ({ error } = await admin.auth.admin.signOut(accessToken, 'global'));
-        if (error) throw new Error('internal');
+        if (gone(error)) return;
+        ({ error } = await admin.auth.admin.signOut(accessToken, 'global'));
+        if (!gone(error)) throw new Error('internal');
       },
     }),
     userDeps(admin),

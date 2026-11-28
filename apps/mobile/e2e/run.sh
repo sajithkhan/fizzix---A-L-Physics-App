@@ -105,6 +105,12 @@ for flow in $failed; do
   echo "::group::$name: app log"
   adb logcat -d | grep -E "ReactNativeJS|AndroidRuntime|FATAL" | tail -80
   echo "::endgroup::"
+  # Server side: Edge Function logs carry only ids, status and error codes (never secrets).
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx supabase_edge_runtime_fizzix; then
+    echo "::group::$name: edge function log"
+    docker logs supabase_edge_runtime_fizzix --tail 60 2>&1
+    echo "::endgroup::"
+  fi
 done
 
 exit "$FAILED"

@@ -16,6 +16,11 @@ Workflow: `.github/workflows/release-staging.yml` ("Release to staging"). It run
 2. The **project ref** is the 20-character id in the dashboard URL
    (`supabase.com/dashboard/project/<ref>`).
 3. supabase.com → **Account → Access Tokens → Generate new token**, name `github-staging`.
+   Resource access: `fizzix-staging` only. Permissions (they cannot be changed later):
+   **Project** read-write, **Database** read-write, **Application services** read-write,
+   **Infrastructure and delivery** read (`config push` reads add-ons), **Account and
+   organization** none. Expiry 90 days; when it expires, make a new one and update the
+   secret.
 
 Free projects pause after about a week without use; restore from the dashboard if a release
 fails to connect.

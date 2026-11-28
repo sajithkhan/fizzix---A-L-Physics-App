@@ -38,6 +38,9 @@ white-label. When unsure, choose the safer and simpler option and say why.
 
 - Never disable Row Level Security. Every new table enables RLS and ships with policies and
   pgTAP tests in the same change. Default is deny.
+- Every new table also grants `anon` / `authenticated` explicitly in its migration (and adds
+  them to `supabase/tests/05_api_grants.test.sql`). Hosted projects grant nothing by
+  default (ADR-0017).
 - Never put a secret, service-role key or API key in app, web or repo code. Only the Supabase
   anon key and URL may appear in client code. Secrets live in Edge Function secrets or GitHub
   Actions secrets.

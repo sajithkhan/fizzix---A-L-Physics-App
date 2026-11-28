@@ -198,10 +198,12 @@ jobs:
           save=$(curl -s -o /tmp/save.json -w '%{http_code}' -X POST "$api/functions/v1/reset-password" \
             -H "apikey: $key" -H "Authorization: Bearer $otp" -H 'Content-Type: application/json' \
             -d '{"password":"reset1234"}')
+          # AC3: the session from before the reset no longer works.
+          before=$(curl -s -o /dev/null -w '%{http_code}' "$api/auth/v1/user" -H "apikey: $key" -H "Authorization: Bearer $token")
           old=$(login smoke1234); new=$(login reset1234)
-          echo "reset-request -> $req ($(cat /tmp/req.json)), reset-password -> $save ($(cat /tmp/save.json)), old -> $old, new -> $new"
+          echo "reset-request -> $req ($(cat /tmp/req.json)), reset-password -> $save ($(cat /tmp/save.json)), earlier session -> $before, old -> $old, new -> $new"
           if [ "$c" != "204" ] && [ "$c" != "200" ]; then dump; exit 1; fi
-          if [ "$req" != "200" ] || [ "$save" != "200" ] || [ "$old" != "401" ] || [ "$new" != "200" ]; then dump; exit 1; fi
+          if [ "$req" != "200" ] || [ "$save" != "200" ] || [ "$before" = "200" ] || [ "$old" != "401" ] || [ "$new" != "200" ]; then dump; exit 1; fi
 
       - name: Generate native Android project
         working-directory: apps/mobile

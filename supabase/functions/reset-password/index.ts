@@ -35,17 +35,13 @@ Deno.serve(
       },
       async signOutEverywhere(accessToken) {
         // End every session (AC3). Auth may already have ended them when the password
-        // changed; "session not found" then means the job is done. Retry other errors once.
-        const gone = (e: { status?: number; code?: string } | null) =>
-          !e ||
-          e.status === 401 ||
-          e.status === 403 ||
-          e.status === 404 ||
-          e.code === 'session_not_found';
-        let { error } = await admin.auth.admin.signOut(accessToken, 'global');
-        if (gone(error)) return;
-        ({ error } = await admin.auth.admin.signOut(accessToken, 'global'));
-        if (!gone(error)) throw stageError('sign_out', error?.code ?? String(error?.status ?? ''));
+        // changed, and then answers the sign-out with an error. So on an error, check: if
+        // this session no longer works, sign-out is done; if it still works, fail.
+        const { error } = await admin.auth.admin.signOut(accessToken, 'global');
+        if (!error) return;
+        const { data, error: check } = await admin.auth.getUser(accessToken);
+        if (check || !data.user) return;
+        throw stageError('sign_out', error.code ?? String(error.status ?? ''));
       },
     }),
     userDeps(admin),

@@ -24,7 +24,10 @@ a password change, and the password Auth stores is derived on the server (ADR-00
 - `reset-password` Edge Function (signed in): requires an OTP sign-in in the last 10 minutes
   (JWT `amr`), an open intent (`reset_allowed()`) and the sign-up password rules. It stores
   the derived password, closes the intent, lifts any login lock for the number and signs out
-  every session (`admin.signOut(token, 'global')`). The app drops its local session and opens
+  every session (`admin.signOut(token, 'global')`). Supabase Auth already ends the sessions
+  when the password changes and then answers that sign-out with an error; the function
+  accepts this only after checking that the session really no longer works. CI checks that a
+  session from before the reset is refused. The app drops its local session and opens
   login with a note; the student logs in with the new password.
 - A number without an account gets `not_registered`. Sign-up already reveals this, so it
   adds no new information, and it tells the student to register.

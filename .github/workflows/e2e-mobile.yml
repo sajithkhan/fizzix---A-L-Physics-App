@@ -226,6 +226,29 @@ jobs:
             exit 1
           fi
 
+      # ST-56: change the password with the current one; this phone gets a working session.
+      - name: Smoke-test change password against the local Supabase
+        run: |
+          api=http://127.0.0.1:54321
+          key="$EXPO_PUBLIC_SUPABASE_ANON_KEY"
+          login() {
+            curl -s -o /tmp/login.json -w '%{http_code}' -X POST "$api/functions/v1/login" -H "apikey: $key" \
+              -H 'Content-Type: application/json' -d "{\"phone\":\"0770000002\",\"password\":\"$1\"}"
+          }
+          login reset1234 >/dev/null; token=$(jq -r .access_token /tmp/login.json)
+          change=$(curl -s -o /tmp/change.json -w '%{http_code}' -X POST "$api/functions/v1/change-password" \
+            -H "apikey: $key" -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+            -d '{"current":"reset1234","password":"change1234"}')
+          fresh=$(jq -r .access_token /tmp/change.json)
+          active=$(curl -s -X POST "$api/rest/v1/rpc/session_status" -H "apikey: $key" \
+            -H "Authorization: Bearer $fresh" -H 'Content-Type: application/json' -d '{}')
+          old=$(login reset1234); new=$(login change1234)
+          echo "change-password -> $change, new session active -> $active, old -> $old, new -> $new"
+          if [ "$change" != "200" ] || [ "$active" != "true" ] || [ "$old" != "401" ] || [ "$new" != "200" ]; then
+            echo "::group::edge runtime log"; docker logs supabase_edge_runtime_fizzix --tail 60 2>&1; echo "::endgroup::"
+            exit 1
+          fi
+
       - name: Generate native Android project
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --no-install

@@ -12,8 +12,8 @@ import { radius, space, useTheme } from '@/theme';
 import { loadMyProfile, type MyProfile } from './profile';
 
 /**
- * Screen 9 · Settings. ST-07 adds the profile card and logout (with a confirm step). The
- * other rows (theme, language, password, Premium, delete account) come with their stories.
+ * Screen 9 · Settings. ST-07: profile card and logout (with a confirm step). ST-56: change
+ * password. The other rows (theme, language, Premium, delete account) come with their stories.
  */
 export function SettingsScreen() {
   const { t } = useTranslation();
@@ -103,6 +103,17 @@ export function SettingsScreen() {
         ]}
       >
         <Pressable
+          testID="settings-change-password"
+          accessibilityRole="button"
+          onPress={() => router.push('/change-password')}
+          style={[styles.row, styles.rowLine, { borderBottomColor: colors.surfaceBorder }]}
+        >
+          <Text style={[styles.rowTitle, { color: colors.text }]}>
+            {t('settings.changePassword')}
+          </Text>
+          <Text style={[styles.chevron, { color: colors.textMuted }]}>›</Text>
+        </Pressable>
+        <Pressable
           testID="settings-logout"
           accessibilityRole="button"
           accessibilityHint={t('settings.logoutHint')}
@@ -159,5 +170,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   rowTitle: { fontSize: 15, fontWeight: '600' },
+  rowLine: {
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  chevron: { fontSize: 18 },
   rowHint: { fontSize: 12 },
 });

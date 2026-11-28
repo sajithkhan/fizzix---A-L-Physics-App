@@ -2,36 +2,11 @@
 // Public (no JWT): config.toml sets verify_jwt = false for this function.
 import { createPublicHandler } from '../_shared/handler.ts';
 import { publicDeps, readEnv, serviceClient } from '../_shared/runtime.ts';
-import { loginSpec, LoginOutput, type GrantResult } from './login.ts';
+import { loginSpec } from './login.ts';
+import { passwordGrant } from '../_shared/auth-grant.ts';
 
 const env = readEnv();
 const admin = serviceClient(env);
-
-async function passwordGrant(phone: string, password: string): Promise<GrantResult> {
-  try {
-    const res = await fetch(`${env.url}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: { apikey: env.anonKey, 'content-type': 'application/json' },
-      // Auth stores phone numbers without the leading '+'.
-      body: JSON.stringify({ phone: phone.replace(/^\+/, ''), password }),
-    });
-    const body = await res.json().catch(() => null);
-    if (res.ok) {
-      const session = LoginOutput.safeParse({
-        access_token: body?.access_token,
-        refresh_token: body?.refresh_token,
-        expires_in: body?.expires_in,
-        expires_at: body?.expires_at,
-      });
-      return session.success ? { kind: 'ok', session: session.data } : { kind: 'error' };
-    }
-    if (res.status === 400 && body?.error_code === 'invalid_credentials')
-      return { kind: 'invalid' };
-    return { kind: 'error' };
-  } catch {
-    return { kind: 'error' };
-  }
-}
 
 const handler = createPublicHandler(
   loginSpec({
@@ -56,7 +31,7 @@ const handler = createPublicHandler(
       }
       return data;
     },
-    passwordGrant,
+    passwordGrant: (phone, password) => passwordGrant(env, phone, password),
   }),
   publicDeps,
 );

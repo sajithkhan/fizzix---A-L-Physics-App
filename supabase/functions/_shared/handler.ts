@@ -38,7 +38,29 @@ export interface LogEntry {
   user_id?: string;
   status: number;
   code?: ErrorCode;
+  /** For internal errors only: which step failed, e.g. "sign_out:session_not_found". */
+  stage?: string;
   ms: number;
+}
+
+/**
+ * Throw `stageError('sign_out', error.code)` from a dependency to fail with `internal` while
+ * logging which step broke. Only lowercase step names and Supabase error codes, never data.
+ */
+export function stageError(stage: string, code?: string | null): Error {
+  const safe = (v: string) =>
+    v
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .slice(0, 40);
+  return new Error(`internal:${safe(stage)}${code ? `:${safe(code)}` : ''}`);
+}
+
+function stageOf(err: unknown): string | undefined {
+  const message = (err as { message?: unknown })?.message;
+  if (typeof message !== 'string') return undefined;
+  const m = /^internal:([a-z0-9_]{1,40}(?::[a-z0-9_]{1,40})?)$/.exec(message);
+  return m?.[1];
 }
 
 export interface Context {
@@ -112,7 +134,7 @@ export function createHandler<In extends z.ZodTypeAny, Out extends z.ZodTypeAny>
     const requestId = newId();
     let userId: string | undefined;
 
-    const fail = (code: ErrorCode): Response => {
+    const fail = (code: ErrorCode, stage?: string): Response => {
       const status = ERROR_STATUS[code];
       deps.log({
         fn: spec.name,
@@ -120,6 +142,7 @@ export function createHandler<In extends z.ZodTypeAny, Out extends z.ZodTypeAny>
         ...(userId ? { user_id: userId } : {}),
         status,
         code,
+        ...(stage ? { stage } : {}),
         ms: now() - started,
       });
       return json(status, { error: { code } }, requestId);
@@ -170,7 +193,7 @@ export function createHandler<In extends z.ZodTypeAny, Out extends z.ZodTypeAny>
           : isErrorCode((err as { message?: unknown })?.message)
             ? ((err as Error).message as ErrorCode)
             : 'internal';
-      return fail(code);
+      return fail(code, code === 'internal' ? stageOf(err) : undefined);
     }
   };
 }
@@ -218,9 +241,16 @@ export function createPublicHandler<In extends z.ZodTypeAny, Out extends z.ZodTy
   return async (req) => {
     const started = now();
     const requestId = newId();
-    const fail = (code: ErrorCode): Response => {
+    const fail = (code: ErrorCode, stage?: string): Response => {
       const status = ERROR_STATUS[code];
-      deps.log({ fn: spec.name, request_id: requestId, status, code, ms: now() - started });
+      deps.log({
+        fn: spec.name,
+        request_id: requestId,
+        status,
+        code,
+        ...(stage ? { stage } : {}),
+        ms: now() - started,
+      });
       return json(status, { error: { code } }, requestId);
     };
 
@@ -244,7 +274,7 @@ export function createPublicHandler<In extends z.ZodTypeAny, Out extends z.ZodTy
           : isErrorCode((err as { message?: unknown })?.message)
             ? ((err as Error).message as ErrorCode)
             : 'internal';
-      return fail(code);
+      return fail(code, code === 'internal' ? stageOf(err) : undefined);
     }
   };
 }

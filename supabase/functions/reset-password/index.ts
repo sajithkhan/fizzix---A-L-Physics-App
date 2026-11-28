@@ -1,6 +1,6 @@
 // ST-55 · POST /functions/v1/reset-password  { password } → { ok } (ADR-0011).
 // Signed-in with the session the reset OTP just created.
-import { createHandler } from '../_shared/handler.ts';
+import { createHandler, stageError } from '../_shared/handler.ts';
 import { readEnv, serviceClient, userDeps } from '../_shared/runtime.ts';
 import { resetPasswordSpec } from './reset-password.ts';
 
@@ -14,7 +14,7 @@ Deno.serve(
       nowSeconds: () => Math.floor(Date.now() / 1000),
       async resetAllowed(userId) {
         const { data, error } = await admin.rpc('reset_allowed', { p_user: userId });
-        if (error) throw new Error('internal');
+        if (error) throw stageError('reset_allowed', error.code);
         return data === true;
       },
       async setAuthPassword(userId, password) {
@@ -24,14 +24,14 @@ Deno.serve(
       },
       async resetFinished(userId) {
         const { error } = await admin.rpc('reset_finished', { p_user: userId });
-        if (error) throw new Error('internal');
+        if (error) throw stageError('reset_finished', error.code);
       },
       async clearLoginLock(numberKey) {
         const { error } = await admin.rpc('login_result', {
           p_number_key: numberKey,
           p_success: true,
         });
-        if (error) throw new Error('internal');
+        if (error) throw stageError('clear_login_lock', error.code);
       },
       async signOutEverywhere(accessToken) {
         // End every session (AC3). Auth may already have ended them when the password
@@ -45,7 +45,7 @@ Deno.serve(
         let { error } = await admin.auth.admin.signOut(accessToken, 'global');
         if (gone(error)) return;
         ({ error } = await admin.auth.admin.signOut(accessToken, 'global'));
-        if (!gone(error)) throw new Error('internal');
+        if (!gone(error)) throw stageError('sign_out', error?.code ?? String(error?.status ?? ''));
       },
     }),
     userDeps(admin),

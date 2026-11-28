@@ -1,0 +1,59 @@
+# ST-06 · One active device per account — end to end against a local Supabase. The emulator
+# is phone A. "Phone B" is a login made from the test machine (scripts/other-phone-login.js).
+# Needs SUPABASE_URL and SUPABASE_ANON_KEY (run.sh passes them). Test number 0770000010.
+appId: lk.fizzix.app
+name: ST-06 One active device per account
+tags:
+  - ST-06
+---
+- runFlow:
+    file: subflows/sign-up.yaml
+    env:
+      PHONE: '0770000010'
+      NAME: 'Ravi Shankar'
+      USERNAME: 'ravi_e2e'
+
+# Phone B logs in while phone A is in the background.
+- pressKey: Home
+- runScript:
+    file: scripts/other-phone-login.js
+    env:
+      PHONE: '0770000010'
+      PASSWORD: 'physics26'
+
+# AC1 + AC2: phone A comes back, is signed out and told why.
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: login-elsewhere
+    timeout: 30000
+- assertVisible: '.*வேறொரு phone-இல் உள்நுழைந்ததால்.*'
+
+# It stays signed out after a restart.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: login-screen
+    timeout: 30000
+- assertNotVisible:
+    id: home-screen
+
+# Phone A logs in again: now phone B is the one signed out.
+- tapOn:
+    id: login-phone
+- inputText: '0770000010'
+- pressKey: Enter
+- tapOn:
+    id: login-password
+- inputText: 'physics26'
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 20000
+- runScript:
+    file: scripts/other-phone-still-active.js
+    env:
+      EXPECT: 'false'

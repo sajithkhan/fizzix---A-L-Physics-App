@@ -1,5 +1,5 @@
 import { deepStrictEqual as assertEquals } from 'node:assert/strict';
-import { hasFreshOtp, tokenAmr } from './jwt.ts';
+import { hasFreshOtp, tokenAmr, tokenSessionId } from './jwt.ts';
 
 function token(payload: unknown): string {
   const b64 = btoa(JSON.stringify(payload))
@@ -26,4 +26,11 @@ Deno.test('a fresh OTP means an OTP sign-in within the window', () => {
   assertEquals(hasFreshOtp([{ method: 'otp', timestamp: now - 601 }], now, 600), false);
   assertEquals(hasFreshOtp([{ method: 'password', timestamp: now }], now, 600), false);
   assertEquals(hasFreshOtp(undefined, now, 600), false);
+});
+
+Deno.test('reads the session id from a token', () => {
+  const sid = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  assertEquals(tokenSessionId(token({ session_id: sid })), sid);
+  assertEquals(tokenSessionId(token({ session_id: "1' or 1=1" })), undefined);
+  assertEquals(tokenSessionId('junk'), undefined);
 });

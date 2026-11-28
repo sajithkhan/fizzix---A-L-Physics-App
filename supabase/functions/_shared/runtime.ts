@@ -7,9 +7,9 @@
  *   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, PASSWORD_PEPPER
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { Deps, LogEntry, PublicDeps } from './handler.ts';
+import { AppError, type Deps, type LogEntry, type PublicDeps } from './handler.ts';
 import { requirePepper } from './password.ts';
-import { tokenAmr } from './jwt.ts';
+import { tokenAmr, tokenSessionId } from './jwt.ts';
 
 export interface Env {
   url: string;
@@ -53,6 +53,13 @@ export function userDeps(admin: SupabaseClient): Deps {
       const { data, error } = await admin.auth.getUser(token);
       if (error || !data.user) return null;
       const phone = data.user.phone ? `+${data.user.phone.replace(/^\+/, '')}` : undefined;
+      // ST-06: only the account's active session may use Edge Functions.
+      const { data: active, error: activeError } = await admin.rpc('edge_session_active', {
+        p_user: data.user.id,
+        p_session: tokenSessionId(token) ?? null,
+      });
+      if (activeError) throw new Error('internal');
+      if (active !== true) throw new AppError('signed_in_elsewhere');
       const amr = tokenAmr(token);
       return { id: data.user.id, ...(phone ? { phone } : {}), ...(amr ? { amr } : {}) };
     },

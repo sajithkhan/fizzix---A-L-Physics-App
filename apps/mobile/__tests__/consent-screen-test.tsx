@@ -36,7 +36,9 @@ async function fillAccount() {
 }
 
 const serverCalls = (calls: { rpc: Array<[string, unknown]> }) =>
-  calls.rpc.filter(([n]) => n !== 'username_available' && n !== 'consent_status');
+  calls.rpc.filter(
+    ([n]) => n !== 'username_available' && n !== 'consent_status' && n !== 'session_status',
+  );
 
 let openURL: jest.SpyInstance;
 

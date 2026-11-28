@@ -8,6 +8,7 @@ import { createI18n } from '@/i18n';
 import { loadSavedLocale } from '@/lib/locale-store';
 import { LocaleContext } from '@/features/language/locale-context';
 import { Loading } from '@/components/loading';
+import { SessionGuard } from '@/features/session/session-guard';
 import { useTheme } from '@/theme';
 
 export default function RootLayout() {
@@ -43,6 +44,7 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: colors.background },
               }}
             />
+            <SessionGuard />
           </LocaleContext.Provider>
         ) : (
           <Loading />

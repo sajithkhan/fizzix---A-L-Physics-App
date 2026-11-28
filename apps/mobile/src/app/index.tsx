@@ -6,6 +6,7 @@ import { Loading } from '@/components/loading';
 
 const TARGET = {
   signed_out: '/login',
+  signed_out_elsewhere: { pathname: '/login', params: { reason: 'elsewhere' } },
   needs_account: '/account-setup',
   needs_consent: '/consent',
   complete: '/home',
@@ -15,7 +16,7 @@ const TARGET = {
  * Entry. First launch: language (ST-01), then sign-up. Later opens with no session: login
  * (ST-54), which links to sign-up (ST-02). Verified number without an account: account
  * creation (ST-04). Finished account with an old privacy notice: accept the new one (ST-58).
- * Finished account: home.
+ * Finished account: home. Signed out by a sign-in on another phone: login with a note (ST-06).
  */
 export default function Index() {
   const { saved } = useLocaleState();

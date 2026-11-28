@@ -201,3 +201,13 @@ Deno.test('an internal error may log which step failed, and nothing else', async
   await call(d2, post({ n: 1 }), sneaky);
   assertEquals(d2.logs[0]?.stage, undefined);
 });
+
+Deno.test(
+  'a token from a phone that was signed out elsewhere is 401 signed_in_elsewhere',
+  async () => {
+    const d = deps({ verifyToken: () => Promise.reject(new AppError('signed_in_elsewhere')) });
+    const r = await call(d, post({ n: 1 }));
+    assertEquals(r.status, 401);
+    assertEquals(r.body, { error: { code: 'signed_in_elsewhere' } });
+  },
+);

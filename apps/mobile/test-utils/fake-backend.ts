@@ -24,6 +24,10 @@ export interface FakeBackendOptions {
   /** Error codes the password-reset Edge Functions answer with. */
   resetRequestErrorCode?: string;
   resetPasswordErrorCode?: string;
+  /** ST-06: this session is no longer the account's active one. */
+  sessionActive?: boolean;
+  /** ST-06: Auth refuses to refresh this session (signed in elsewhere). */
+  refreshRefused?: boolean;
   /** Logging out fails as if offline. */
   signOutError?: boolean;
   completeError?: FakeError;
@@ -104,6 +108,9 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
         ageBand = args?.p_age_band as typeof ageBand;
         return Promise.resolve({ data: null, error: null });
       }
+      if (name === 'session_status') {
+        return Promise.resolve({ data: opts.sessionActive !== false, error: null });
+      }
       if (name === 'consent_status') {
         const ok = notice ? accepted.has(notice.version) : false;
         return Promise.resolve({
@@ -126,9 +133,15 @@ export function fakeBackend(opts: FakeBackendOptions = {}) {
     },
     auth: {
       getSession: () =>
-        Promise.resolve({
-          data: { session: signedIn ? { user: { id: 'u1', phone: '94770000003' } } : null },
-        }),
+        opts.refreshRefused && signedIn
+          ? Promise.resolve({
+              data: { session: null },
+              error: { name: 'AuthApiError', message: 'signed_in_elsewhere', status: 401 },
+            })
+          : Promise.resolve({
+              data: { session: signedIn ? { user: { id: 'u1', phone: '94770000003' } } : null },
+              error: null,
+            }),
       verifyOtp: (args: { phone: string; token: string }) => {
         calls.verifyOtp.push(args);
         if (args.token !== '123456') {
